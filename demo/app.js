@@ -10,11 +10,11 @@ const OpenAI = require('openai');
 const app = express();
 app.use(cors()); 
 
-// 【新增】解析 JSON 格式的请求体，否则无法获取前端传来的用户名和密码
+//解析 JSON 格式的请求体，否则无法获取前端传来的用户名和密码
 app.use(express.json());
 app.use(express.static('./'));
 
-// 1. 数据库连接配置
+// 数据库连接配置
 const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -31,10 +31,10 @@ const saveLog = (username, action, req) => {
     });
 };
 
-// 定义 JWT 密钥（登录时会用到）
+// 定义 JWT 密钥
 const SECRET_KEY = 'your_movie_data_secret_key_123';
 
-// ------------------- 注册接口开始 -------------------
+// ------------------- 注册 -------------------
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
 
@@ -62,9 +62,9 @@ app.post('/api/register', (req, res) => {
         });
     });
 });
-// ------------------- 注册接口结束 -------------------
 
-// ------------------- 登录接口开始 -------------------
+
+// ------------------- 登录 -------------------
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
 
@@ -109,7 +109,7 @@ app.post('/api/login', (req, res) => {
         });
     });
 });
-// ------------------- 登录接口结束 -------------------
+
 
 // 2. 获取电影数据的接口 (保留原有逻辑)
 app.get('/api/movies', (req, res) => {
