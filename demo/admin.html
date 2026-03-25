@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理 system - 电影票房分析</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="js/echarts.js"></script>
+    <script src="js/echarts-wordcloud.min.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/charts_all.js"></script>
+    <script>
+        // 登录检查（保持不变）
+        (function() {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            if (!token || role !== 'admin') {
+                alert('权限不足，请以管理员账号登录！');
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <div class="admin-info">
+                <img class="avatar">
+                <p id="adminName">喵喵喵</p>
+            </div>
+            <nav class="menu">
+                <button class="menu-item active" data-target="panel-user">👥 用户管理</button>
+                <button class="menu-item" data-target="panel-log">📜 操作日志</button>
+                <button class="menu-item" data-target="panel-message">💬 用户留言</button>               
+                <button class="menu-item" data-target="panel-predict">🔮 票房预测</button>
+                <button class="menu-item" data-target="panel-chart">📊 图表更替</button>
+            </nav>
+            <button class="logout-btn" id="logoutBtn">退出系统</button>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <h2 id="currentTitle">👥 用户管理 </h2>
+            </header>
+
+            <!-- 用户管理面板 -->
+            <section class="panel active" id="panel-user">
+                <div class="tool-bar">
+                    <button class="add-btn">+ 新增用户</button>
+                    <input type="text" placeholder="搜索用户名..." id="userSearch">
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </section>
+
+            <!-- 操作日志面板 -->
+            <section class="panel" id="panel-log">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>时间</th><th>操作人</th><th>行为</th><th>IP地址</th></tr>
+                    </thead>
+                    <tbody id="logTableBody"></tbody>
+                </table>
+            </section>
+
+            <!-- 图表更替面板 (重构：动态生成预览超市) -->
+            <section class="panel" id="panel-chart">
+                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; color: #fff;">
+                    <h3 style="margin-bottom: 10px; color: #00f6ff;">📊 大屏图表布局动态管理</h3>
+                    <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">
+                        温馨提示：在此处修改图表类型或标题后，点击“保存修改”，大屏刷新后即可生效。
+                    </p>
+
+                    <!-- 配置表格 -->
+                    <table class="user-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(4, 48, 101, 0.772);">
+                                <th style="padding: 12px;">工位编号</th>
+                                <th style="padding: 12px;">图表标题 (可编辑)</th>
+                                <th style="padding: 12px;">选择图表样式</th>
+                                <th style="padding: 12px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chartConfigBody"></tbody>
+                    </table>
+
+                    <!-- 图表超市：动态生成预览卡片 -->
+                    <div class="chart-supermarket">
+                        <div class="supermarket-header">
+                            <h3>🏪 图表超市 </h3>
+                            <p>点击上方表格的“更替”可以修改大屏布局，下方展示所有可用图表的实时样式</p>
+                        </div>
+                        <!-- 动态卡片将插入此容器 -->
+                        <div id="supermarketGrid" class="chart-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 票房预测面板 -->
+<div id="panel-predict" class="panel">
+    <div class="predict-container">
+        <div class="predict-box dark-horse-box">
+            <div class="box-header">
+                <h3><i class="icon-medal"></i> 历史黑马票房榜 (LightGBM 识别)</h3>
+                <p class="subtitle">基于模型识别出的低预算、高回报影片</p>
+            </div>
+            <div class="box-content">
+                <table class="dark-horse-table">
+                    <thead>
+                        <tr>
+                            <th>电影名称</th>
+                            <th>预算 ($)</th>
+                            <th>实际票房 ($)</th>
+                            <th>ROI (回报率)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="darkHorseList">
+                        <tr>
+                            <td colspan="4" class="loading">正在加载模型识别数据...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="predict-box deep-prediction-box">
+            <div class="box-header">
+                <h3><i class="icon-target"></i> 深度票房预测 (Random Forest)</h3>
+                <p class="subtitle">请输入 9 项核心指标进行模拟计算</p>
+            </div>
+            <div class="box-content">
+                <form id="predictionForm" class="prediction-form">
+                        <div class="input-grid">
+                        <div class="input-item">
+                            <label>制作预算 (美元)</label>
+                            <input type="number" name="budget" value="0" required>
+                        </div>
+                        <div class="input-item">
+                            <label>导演知名度 (FB点赞)</label>
+                            <input type="number" name="director_likes" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>主演1知名度 (FB点赞)</label>
+                            <input type="number" name="actor1_likes" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>主演2知名度 (FB点赞)</label>
+                            <input type="number" name="actor2_likes" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>主演3知名度 (FB点赞)</label>
+                            <input type="number" name="actor3_likes" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>电影社交热度 (FB点赞)</label>
+                            <input type="number" name="movie_likes" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>用户投票数 (IMDb)</label>
+                            <input type="number" name="voted_users" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>评论数量</label>
+                            <input type="number" name="review_count" value="0" placeholder="0">
+                        </div>
+                        <div class="input-item">
+                            <label>预期评分 (IMDb)</label>
+                            <input type="number" step="0.1" name="imdb_score" value="0" placeholder="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="predict-btn">开始深度计算</button>
+                </form>
+                <div id="predictResult" class="result-display">
+                    <span class="result-label">预计票房收益：</span>
+                    <span class="result-value">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户留言面板 -->
+<section class="panel" id="panel-message">
+    <div class="tool-bar">
+        <button class="add-btn" id="refreshMessages">🔄 刷新留言</button>
+        <input type="text" placeholder="搜索留言内容或用户名..." id="messageSearch">
+    </div>
+    <table class="data-table" style="table-layout: fixed;">
+        <colgroup>
+            <col style="width: 8%;">      <!-- 留言编号 -->
+            <col style="width: 12%;">     <!-- 用户 -->
+            <col style="width: 45%;">     <!-- 留言内容（留足空间） -->
+            <col style="width: 20%;">     <!-- 留言时间 -->
+            <col style="width: 15%;">     <!-- 操作 -->
+        </colgroup>
+        <thead>
+            <tr>
+                <th>留言编号</th>
+                <th>用户</th>
+                <th>留言内容</th>
+                <th>留言时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="messageTableBody">
+            <!-- 数据将动态渲染到此，初始为空 -->
+        </tbody>
+    </table>
+</section>
+        </main>
+    </div>
+
+    <script>
+        window.movieData = []; 
+    </script>
+    <script src="js/admin-config.js"></script>
+    <script src="js/admin-utils.js"></script>
+    <script src="js/admin-user.js"></script>
+    <script src="js/admin-log.js"></script>
+    <script src="js/admin-message.js"></script>
+    <script src="js/admin-predict.js"></script>
+    <script src="js/admin-chart.js"></script>
+    <script src="js/admin-main.js"></script>
+</body>
+</html>

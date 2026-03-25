@@ -1,0 +1,381 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; }
+
+.admin-container { display: flex; height: 100vh; }
+
+/* 侧边栏样式 */
+.sidebar { width: 240px; background: #001529; color: white; display: flex; flex-direction: column; }
+.admin-info { padding: 40px 20px; text-align: center; border-bottom: 1px solid #1f2d3d; }
+.avatar { width: 60px; 
+    background:url(../img/touxiang.png) ;
+    background-size: cover;
+    height: 60px; border-radius: 50%; margin-bottom: 10px; border: 2px solid #1890ff; }
+
+.menu { flex: 1; padding: 20px 0; }
+.menu-item { 
+    width: 100%; padding: 15px 25px; border: none; background: none; 
+    color: #a6adb4; text-align: left; cursor: pointer; font-size: 14px; transition: 0.3s;
+}
+.menu-item:hover { color: white; background: #1890ff; }
+.menu-item.active { color: white; background: #1890ff; }
+
+.logout-btn { 
+    padding: 15px; background: #ff4d4f; color: white; border: none; cursor: pointer; 
+}
+
+/* 右侧内容区 */
+.main-content { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    /* 允许纵向滚动，这是修复页面的关键 */
+    overflow-y: auto; 
+}
+.content-header { background: white; padding: 20px 30px; box-shadow: 0 1px 4px rgba(0,21,41,.08); }
+
+.panel { display: none; padding: 30px; flex: 1;
+        overflow: visible;
+        position: relative; /* 新增：为子元素开启层级基准 */
+    z-index: 1;         /* 新增：初始层级 */ }
+.panel.active { display: block; }
+
+/* 表格样式 */
+.tool-bar { margin-bottom: 20px; display: flex; gap: 10px; }
+.add-btn { background: #52c41a; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; width: 250px; }
+
+/* 修改后的表格基础样式 */
+.data-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: white; 
+    border-radius: 8px; 
+    /* 确保表格本身不裁剪内容 */
+    overflow: visible; 
+}
+
+.data-table th, .data-table td { 
+    padding: 15px; 
+    text-align: left; 
+    border-bottom: 1px solid #f0f0f0; 
+    /* 关键修复：允许下拉框溢出显示 */
+    position: relative; 
+    overflow: visible !important; 
+}
+
+/* 如果你的图表配置使用的是 .user-table，也请一并加上 */
+.user-table td {
+    position: relative;
+    overflow: visible !important;
+    padding: 12px;
+}
+
+.placeholder-tip { text-align: center; color: #999; margin-top: 100px; font-size: 18px; }
+
+.badge { padding: 3px 8px; border-radius: 10px; font-size: 12px; }
+.badge.admin { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.badge.user { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+
+.del-btn { background: #ff4d4f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+
+/* 图表超市容器 */
+.chart-supermarket {
+    margin-top: 40px;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    position: relative; 
+    z-index: 1; /* 降低层级，确保不遮挡上方的下拉菜单 */
+}
+.supermarket-header {
+    margin-bottom: 20px;
+    border-left: 4px solid #1890ff;
+    padding-left: 15px;
+}
+
+.supermarket-header h3 { color: #fff; margin-bottom: 5px; }
+.supermarket-header p { color: #888; font-size: 13px; }
+
+/* 14 宫格布局 */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* 自动每行 3-4 个 */
+    gap: 20px;
+}
+
+.chart-item-box {
+    background: #262626;
+    border: 1px solid #434343;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: 0.3s;
+}
+
+.chart-item-box:hover {
+    border-color: #1890ff;
+    transform: translateY(-5px);
+}
+
+.chart-item-box.gray { opacity: 0.6; filter: grayscale(1); }
+
+.item-info {
+    background: #303030;
+    color: #00f6ff;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    border-bottom: 1px solid #434343;
+}
+
+/* 关键：预览容器的高度 */
+.preview-container {
+    width: 100%;
+    height: 240px; /* 固定高度，防止崩塌 */
+}
+
+.table-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #4c9bfd;
+    border-radius: 4px;
+    background-color: #ffffff; /* 白色背景 */
+    color: #333333;            /* 深灰色文字，可读性高 */
+    position: relative;
+    z-index: 100;
+    cursor: pointer;
+    outline: none;
+}
+
+.table-select:focus {
+    border-color: #1890ff;
+    outline: none;
+}
+
+/* 下拉选项保持原有黑色背景 */
+.table-select option {
+    background-color: #1a1a1a; /* 黑色背景 */
+    color: #ffffff;            /* 白色文字 */
+}
+#panel-chart > div:first-child {
+    position: relative; 
+    z-index: 99; /* 确保配置表始终在超市预览之上 */
+    background: #fff; /* 确保背景不透明 */
+    border-radius: 8px;
+}
+
+#chartConfigBody td:first-child {
+    color: #161717;   /* 亮蓝色，与整体风格一致 */
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(16, 45, 46, 0.5); /* 可选：增加发光效果 */
+}
+
+/* 图表超市卡片头部 */
+.chart-item-box .item-header {
+    background: #303030;
+    border-bottom: 1px solid #434343;
+}
+
+/* 工位下拉框 */
+.chart-item-box .pos-select {
+    width: 80px;
+    padding: 4px;
+    background: #1a1a1a;
+    color: white;
+    border: 1px solid #4c9bfd;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.chart-item-box .pos-select option {
+    background: #1a1a1a;
+    color: white;
+}
+
+/* 应用按钮 */
+.chart-item-box .apply-btn {
+    padding: 4px 8px;
+    background: #1890ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.chart-item-box .apply-btn:hover {
+    background: #40a9ff;
+}
+
+/* 使用中信息 */
+.chart-item-box .usage-info {
+    padding: 4px 12px;
+    background: #262626;
+    color: #aaa;
+    font-size: 11px;
+    border-bottom: 1px solid #434343;
+}
+
+/* 用户留言面板专用样式 */
+#panel-message .data-table td:nth-child(3) {
+    /* 留言内容列自动换行，避免内容被截断 */
+    word-break: break-word;
+    white-space: normal;
+    max-width: 0; /* 配合固定表格布局，强制内容换行 */
+}
+
+#panel-message .data-table td {
+    vertical-align: middle;
+}
+
+/* 操作按钮组间距 */
+#panel-message .del-btn {
+    margin-right: 5px;
+}
+#panel-message .del-btn:last-child {
+    margin-right: 0;
+}
+
+/* 预测面板容器 */
+.predict-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 120px);
+}
+
+.predict-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 8px;
+    /* 关键修改：将 hidden 改为 auto */
+    overflow-y: auto; 
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* 头部样式 */
+.box-header {
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+}
+
+.box-header h3 { color: #001529; font-size: 18px; }
+.subtitle { font-size: 12px; color: #999; margin-top: 5px; }
+
+/* 盒子 A：表格样式 */
+.dark-horse-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.dark-horse-table th, .dark-horse-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+.dark-horse-table th { background: #fafafa; color: #666; font-size: 13px; }
+
+/* 盒子 B：网格输入框 */
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 20px;
+}
+.input-item label { display: block; font-size: 13px; margin-bottom: 8px; color: #555; }
+.input-item input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.predict-btn {
+    margin: 0 20px 20px;
+    padding: 12px;
+    background: #1890ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.predict-btn:hover { background: #40a9ff; }
+
+/* 结果显示区 */
+.result-display {
+    margin: 0 20px 20px;
+    padding: 15px;
+    background: #e6f7ff;
+    border: 1px dashed #91d5ff;
+    border-radius: 6px;
+    text-align: center;
+}
+.result-value { font-size: 24px; color: #1890ff; font-weight: bold; }
+
+/* 留言框 */
+.message-modal .modal-content {
+  max-width: 500px;
+}
+
+.message-input {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #4c9bfd;
+  color: #fff;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.submit-message-btn {
+  background: #4c9bfd;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.submit-message-btn:hover {
+  background: #3a8ee6;
+}
+
+
+/* 搜索结果表格 */
+.search-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  color: #fff;
+}
+
+.search-results-table thead tr {
+  background: rgba(76, 155, 253, 0.3);
+}
+
+.search-results-table th {
+  padding: 10px;
+  border: 1px solid #4c9bfd;
+  text-align: left;
+}
+
+.search-results-table td {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-results-table .movie-title {
+  color: #00f6ff;
+}
+
+.search-results-table .gross-value {
+  color: #ffeb3b;
+}

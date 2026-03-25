@@ -1,0 +1,55 @@
+// 主入口模块
+
+const menuItems = document.querySelectorAll('.menu-item');
+const panels = document.querySelectorAll('.panel');
+const currentTitle = document.getElementById('currentTitle');
+
+// 动态设置管理员名称
+(function() {
+    const username = localStorage.getItem('username');
+    const adminNameEl = document.getElementById('adminName');
+    if (username && adminNameEl) {
+        adminNameEl.textContent = username;
+    }
+})();
+
+function switchPanel(targetId) {
+    menuItems.forEach(item => item.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
+    document.getElementById(targetId).classList.add('active');
+    currentTitle.innerText = document.querySelector(`[data-target="${targetId}"]`).innerText;
+
+    if (targetId === 'panel-user') {
+        loadUserList();
+    } else if (targetId === 'panel-log') {
+        loadLogList();
+    } else if (targetId === 'panel-chart') {
+        loadChartConfigs();
+    } else if (targetId === 'panel-message') {
+        loadMessageList();
+    } else if (targetId === 'panel-predict') {
+        loadDarkHorses();
+        const predForm = document.getElementById('predictionForm');
+        if (predForm) {
+            predForm.onsubmit = handleDeepPrediction;
+        }
+    }
+}
+
+menuItems.forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = this.getAttribute('data-target');
+        switchPanel(target);
+    });
+});
+
+switchPanel('panel-user');
+
+document.getElementById('logoutBtn').onclick = function() {
+    localStorage.clear();
+    window.location.href = 'login.html';
+};
+
+ensureMovieData(() => {});
