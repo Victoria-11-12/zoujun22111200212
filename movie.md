@@ -1,34 +1,32 @@
-### 电影字段含义详解
+# 电影字段含义详解
 
-| 字段名                        | 中文含义                 | 说明与解释                                                   |
-| :---------------------------- | :----------------------- | :----------------------------------------------------------- |
-| **color**                     | 色彩                     | 指示电影是**彩色**（Color）还是**黑白**（Black and White）的。这是一个重要的电影技术特征。 |
-| **director_name**             | 导演姓名                 | 电影导演的全名。                                             |
-| **num_critic_for_reviews**    | 影评人评论数量           | 收集到的专业影评人发表的评论文章数量。**是专业评价热度和关注度的指标**。 |
-| **duration**                  | 电影时长                 | 电影的长度，以**分钟**为单位。                               |
-| **director_facebook_likes**   | 导演Facebook点赞数       | 导演本人的官方Facebook主页所获得的总点赞数。**是导演个人知名度和网络影响力的代理变量**。 |
-| **actor_3_facebook_likes**    | 演员3的Facebook点赞数    | 列表中第三位重要演员的Facebook主页总点赞数。                 |
-| **actor_2_name**              | 演员2姓名                | 通常指**女主演**（Leading Actress）或戏份第二多的主角        |
-| **actor_1_facebook_likes**    | 演员1的Facebook点赞数    | 列表中第一位重要演员（通常是**男主演**）的Facebook主页总点赞数。**是明星号召力的核心指标**。 |
-| **gross**                     | 票房总收入               | 电影在全球或特定地区的**总票房收入**。是分析商业成功的关键**目标变量**。注意货币单位（通常为美元）。 |
-| **genres**                    | 电影类型                 | 电影所属的类型，通常由多个类型用                             |
-| **actor_1_name**              | 演员1姓名                | 通常指**男主演**（Leading Actor）或最知名的演员。            |
-| **movie_title**               | 电影名称                 | 电影的正式名称。                                             |
-| **num_voted_users**           | 投票用户数               | 在IMDb上为该电影评分的**用户总数**。**是大众参与度和流行度的核心指标**。 |
-| **cast_total_facebook_likes** | 全体主演Facebook总点赞数 | 通常指`actor_1`, `actor_2`, `actor_3`等主要演员的Facebook点赞数之和。**是整个主演阵容社交媒体影响力的指标**。 |
-| **actor_3_name**              | 演员3姓名                | 另一位重要配角的名字。                                       |
-| **facenumber_in_poster**      | 海报中的人脸数量         | 电影官方主海报中出现的清晰人脸的数量。可用于分析海报营销策略。 |
-| **plot_keywords**             | 剧情关键词               | 描述电影情节的关键词                                         |
-| **movie_imdb_link**           | 电影IMDb链接             | 指向该电影IMDb页面的URL。是电影的唯一标识符。                |
-| **num_user_for_reviews**      | 用户评论数量             | 在IMDb等平台上普通用户发表的**评论数量**（不是评分人数）。**是大众讨论热度的指标**。 |
-| **language**                  | 语言                     | 电影的原始主要语言，如`English`, `Mandarin`。                |
-| **country**                   | 国家/地区                | 电影的主要制作国家或地区。                                   |
-| **content_rating**            | 内容分级                 | 电影的分级，如`PG-13`（家长辅导级）, `R`（限制级）, `PG`（普通辅导级）等。 |
-| **budget**                    | 预算                     | 电影的总制作成本。**是分析投资回报率（ROI）的关键字段**。注意货币单位（通常为美元）。 |
-| **title_year**                | 上映年份                 | 电影首次公映的年份。用于分析趋势。                           |
-| **actor_2_facebook_likes**    | 演员2的Facebook点赞数    | 列表中第二位重要演员的Facebook主页总点赞数。                 |
-| **imdb_score**                | IMDb评分                 | IMDb上的加权平均用户评分（满分10分）。**是电影艺术质量公认的核心指标**，常作为预测或分析的目标。 |
-| **aspect_ratio**              | 画面比例                 | 电影画面的宽高比，如`2.35:1`（宽银幕）或`1.85:1`。属于技术参数。 |
-| **movie_facebook_likes**      | 电影官方Facebook点赞数   | 电影**官方Facebook页面**获得的总点赞数。**是电影自身品牌和营销热度的最直接指标**。 |
-
-
+| 字段名 | 中文含义 | 说明 |
+|--------|----------|------|
+| color | 色彩 | 指示电影是彩色（Color）还是黑白（Black and White）的电影技术特征 |
+| director_name | 导演姓名 | 电影导演的全名 |
+| num_critic_for_reviews | 影评人评论数量 | 专业影评人发表的评论文章数量，是专业评价热度和关注度的指标 |
+| duration | 电影时长 | 电影的长度，以分钟为单位 |
+| director_facebook_likes | 导演Facebook点赞数 | 导演本人的官方Facebook主页所获得的总点赞数，是导演个人知名度和网络影响力的指标 |
+| actor_3_facebook_likes | 演员3的Facebook点赞数 | 列表中第三位重要演员的Facebook主页总点赞数 |
+| actor_2_name | 演员2姓名 | 通常指女主演（Leading Actress）或戏份第二多的主角 |
+| actor_1_facebook_likes | 演员1的Facebook点赞数 | 列表中第一位重要演员（通常是男主演）的Facebook主页总点赞数，是明星号召力的核心指标 |
+| gross | 票房总收入 | 电影在全球或特定地区的总票房收入，是分析商业成功的关键目标变量 |
+| genres | 电影类型 | 电影所属的类型，通常由多个类型组合 |
+| actor_1_name | 演员1姓名 | 通常指男主演（Leading Actor）或最知名的演员 |
+| movie_title | 电影名称 | 电影的正式名称 |
+| num_voted_users | 投票用户数 | 在IMDb上为该电影评分的用户总数，是大众参与度和流行度的核心指标 |
+| cast_total_facebook_likes | 全体主演Facebook总点赞数 | actor_1, actor_2, actor_3等主要演员的Facebook点赞数之和，是整个主演阵容社交媒体影响力的指标 |
+| actor_3_name | 演员3姓名 | 另一位重要配角的名字 |
+| facenumber_in_poster | 海报中的人脸数量 | 电影官方主海报中出现的清晰人脸的数量，可用于分析海报营销策略 |
+| plot_keywords | 剧情关键词 | 描述电影情节的关键词 |
+| movie_imdb_link | 电影IMDb链接 | 指向该电影IMDb页面的URL，是电影的唯一标识符 |
+| num_user_for_reviews | 用户评论数量 | 在IMDb等平台上普通用户发表的评论数量，是大众讨论热度的指标 |
+| language | 语言 | 电影的原始主要语言，如English, Mandarin |
+| country | 国家/地区 | 电影的主要制作国家或地区 |
+| content_rating | 内容分级 | 电影的分级，如PG-13（家长辅导级）, R（限制级）, PG（普通辅导级）等 |
+| budget | 预算 | 电影的总制作成本，是分析投资回报率（ROI）的关键字段 |
+| title_year | 上映年份 | 电影首次公映的年份，用于分析趋势 |
+| actor_2_facebook_likes | 演员2的Facebook点赞数 | 列表中第二位重要演员的Facebook主页总点赞数 |
+| imdb_score | IMDb评分 | IMDb上的加权平均用户评分（满分10分），是电影艺术质量公认的核心指标，常作为预测或分析的目标 |
+| aspect_ratio | 画面比例 | 电影画面的宽高比，如2.35:1（宽银幕）或1.85:1，属于技术参数 |
+| movie_facebook_likes | 电影官方Facebook点赞数 | 电影官方Facebook页面获得的总点赞数，是电影自身品牌和营销热度的最直接指标 |
