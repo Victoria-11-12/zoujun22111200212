@@ -141,3 +141,7 @@ vite.config.ts.timestamp-*
 .env
 
 .trae
+
+test1/111.py
+
+test1/test.ipynb
