@@ -464,32 +464,94 @@ function initRadarChart(boxId, m1Name, m2Name) {
             const found = window.movieData.find(m => m.movie_title && m.movie_title.trim() === name.trim());
             if (found) return found;
         }
-        // 随机选一部作为默认
-        return window.movieData[Math.floor(Math.random() * window.movieData.length)];
+        return null; // 没找到就返回 null，不自动随机
     };
 
-    const mov1 = findMovie(m1Name);
-    const mov2 = findMovie(m2Name);
+    // 验证电影数据是否完整有效
+    const isValidMovie = (m) => {
+        if (!m) return false;
+        if (!m.imdb_score || m.imdb_score === 0) return false;
+        if (!m.gross || m.gross === 0) return false;
+        if (!m.num_critic_for_reviews || m.num_critic_for_reviews === 0) return false;
+        if (!m.cast_total_facebook_likes || m.cast_total_facebook_likes === 0) return false;
+        if (!m.duration || m.duration === 0) return false;
+        return true;
+    };
 
-    // 提取五个维度的归一化值 (0-100)
-    const extractScore = (m) => [
-        m.imdb_score * 10,                               // 评分 (0-100)
-        Math.min(100, (parseFloat(m.gross) || 0) / 1000000),        
-        Math.min(100, (m.num_critic_for_reviews || 0) / 5),   // 评论数
-        Math.min(100, (m.cast_total_facebook_likes || 0) / 100), // 演员人气
-        Math.min(100, (m.duration || 0) / 2)             // 时长 (最多200分钟)
+    // 随机选择一部数据完整的电影
+    const findValidRandomMovie = () => {
+        const validMovies = window.movieData.filter(m => isValidMovie(m));
+        if (validMovies.length === 0) return null;
+        return validMovies[Math.floor(Math.random() * validMovies.length)];
+    };
+
+    const mov1Input = findMovie(m1Name);
+    const mov2Input = findMovie(m2Name);
+
+    // 检查用户输入的电影是否数据完整
+    if (m1Name && m1Name.trim() && !isValidMovie(mov1Input)) {
+        myChart.setOption({
+            title: { text: '电影数据不完整，无法比较', left: 'center', top: 'center', textStyle: { color: '#ff4d4f' } },
+            series: []
+        });
+        return;
+    }
+    if (m2Name && m2Name.trim() && !isValidMovie(mov2Input)) {
+        myChart.setOption({
+            title: { text: '电影数据不完整，无法比较', left: 'center', top: 'center', textStyle: { color: '#ff4d4f' } },
+            series: []
+        });
+        return;
+    }
+
+    // 如果用户未指定电影或指定了但数据完整，则使用该电影或随机选择数据完整的电影
+    const mov1 = mov1Input && isValidMovie(mov1Input) ? mov1Input : findValidRandomMovie();
+    const mov2 = mov2Input && isValidMovie(mov2Input) ? mov2Input : findValidRandomMovie();
+
+    // 如果随机选择也找不到有效数据
+    if (!mov1 || !mov2) {
+        myChart.setOption({
+            title: { text: '电影数据不完整，无法比较', left: 'center', top: 'center', textStyle: { color: '#ff4d4f' } },
+            series: []
+        });
+        return;
+    }
+
+    const dimensions = [
+        { name: '评分', key: 'imdb_score', max: 100 },
+        { name: '票房', key: 'gross', max: 100 },
+        { name: '评论数', key: 'num_critic_for_reviews', max: 100 },
+        { name: '演员人气', key: 'cast_total_facebook_likes', max: 100 },
+        { name: '时长', key: 'duration', max: 100 }
     ];
+
+    const extractScore = (m) => {
+        const scores = [];
+        dimensions.forEach(dim => {
+            let value = 0;
+            const val = m[dim.key];
+            if (val !== null && val !== undefined && val !== '') {
+                if (dim.key === 'imdb_score') {
+                    value = val * 10;
+                } else if (dim.key === 'gross') {
+                    value = Math.min(100, (parseFloat(val) || 0) / 1000000);
+                } else if (dim.key === 'num_critic_for_reviews') {
+                    value = Math.min(100, (val || 0) / 5);
+                } else if (dim.key === 'cast_total_facebook_likes') {
+                    value = Math.min(100, (val || 0) / 100);
+                } else if (dim.key === 'duration') {
+                    value = Math.min(100, (val || 0) / 2);
+                }
+            }
+            scores.push(value);
+        });
+        return scores;
+    };
 
     const data1 = extractScore(mov1);
     const data2 = extractScore(mov2);
 
-    const indicator = [
-        { name: '评分', max: 100 },
-        { name: '票房', max: 100 },
-        { name: '评论数', max: 100 },
-        { name: '演员人气', max: 100 },
-        { name: '时长', max: 100 }
-    ];
+    const indicator = dimensions.map(dim => ({ name: dim.name, max: dim.max }));
 
     myChart.setOption({
         color: ['#67F9D8', '#FFE434', '#56A3F1', '#FF917C'],
@@ -530,31 +592,31 @@ function initRadarChart(boxId, m1Name, m2Name) {
             startAngle: 90,
             splitNumber: 4,
             shape: 'circle',
-            axisName: {//坐标轴名称
+            axisName: {
                 formatter: '【{value}】',
                 color: '#428BD4',
                 backgroundColor: 'rgba(0,0,0,0.3)',
                 borderRadius: 3,
                 padding: [2, 4]
             },
-            splitArea: {//坐标轴区域
+            splitArea: {
                 areaStyle: {
                     color: ['#77EADF', '#26C3BE', '#64AFE9', '#428BD4'],
                     shadowColor: 'rgba(0, 0, 0, 0.3)',
                     shadowBlur: 10
                 }
             },
-            axisLine: {//坐标轴线
+            axisLine: {
                 lineStyle: { color: 'rgba(211, 253, 250, 0.8)' }
             },
-            splitLine: {//坐标轴分割线
+            splitLine: {
                 lineStyle: { color: 'rgba(211, 253, 250, 0.8)' }
             }
         },
         series: [
             {
                 type: 'radar',
-                emphasis: {//高亮
+                emphasis: {
                     lineStyle: { width: 4 }
                 },
                 data: [
@@ -568,11 +630,11 @@ function initRadarChart(boxId, m1Name, m2Name) {
                         symbolSize: 8,
                         label: {
                             show: false,
-                            formatter: (params) => params.value,//显示数值
+                            formatter: (params) => params.value,
                             color: '#fff',
                             fontSize: 9,
                             backgroundColor: 'rgba(0,0,0,0.5)',
-                            borderRadius: 3,//圆角
+                            borderRadius: 3,
                             padding: [2, 4]
                         }
                     },
@@ -587,7 +649,7 @@ function initRadarChart(boxId, m1Name, m2Name) {
                         },
                         lineStyle: { color: '#FFE434', width: 2, type: 'dashed' },
                         itemStyle: { color: '#FFE434' },
-                        symbol: 'rect',//矩形
+                        symbol: 'rect',
                         symbolSize: 8,
                         label: {
                             show: false,
@@ -900,8 +962,11 @@ function initBubbleSocial(boxId, input) {
 
     const filtered = window.movieData.filter(item =>
         item.director_facebook_likes &&
+        item.director_facebook_likes > 0 &&
         item.actor_1_facebook_likes &&
+        item.actor_1_facebook_likes > 0 &&
         item.gross &&
+        item.gross > 0 &&
         filterByInput(item, input)
     );
 
@@ -1295,7 +1360,10 @@ function initBudgetScatter(boxId, input) {
     };
 
     const filtered = window.movieData.filter(item =>
-        item.budget > 0 && item.gross > 0 && filterByInput(item, input)
+        item.budget > 0 &&
+        item.gross > 0 &&
+        item.movie_title &&
+        filterByInput(item, input)
     );
 
     if (filtered.length === 0) {
