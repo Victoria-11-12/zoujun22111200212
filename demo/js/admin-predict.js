@@ -10,12 +10,12 @@ async function loadDarkHorses() {
         if (res.code === 200) {
             let html = '';
             res.data.forEach(movie => {
-                const roi = movie.budget > 0 ? (movie.gross / movie.budget).toFixed(2) : 'N/A';
+                const roi = movie.budget > 0 ? (movie.predicted_gross / movie.budget).toFixed(2) : 'N/A';
                 html += `
                     <tr>
                         <td>${movie.movie_title}</td>
-                        <td>${(movie.budget / 1000000).toFixed(1)}M</td>
-                        <td>${(movie.gross / 1000000).toFixed(1)}M</td>
+                        <td>${movie.budget.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                        <td>${movie.predicted_gross.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
                         <td style="color: #52c41a; font-weight: bold;">${roi}x</td>
                     </tr>
                 `;

@@ -145,3 +145,10 @@ vite.config.ts.timestamp-*
 test1/111.py
 
 test1/test.ipynb
+
+# Office 临时文件
+~$*
+*.tmp
+*.xlk
+*.~vsd
+*.~vsdx
