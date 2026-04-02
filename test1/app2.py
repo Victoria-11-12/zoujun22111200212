@@ -12,7 +12,7 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # 1. 加载模型
 try:
-    lgb_model = joblib.load('lightgbm_model.pkl')
+    lgb_model = joblib.load('lightgbm_model_1.pkl')
     rf_model = joblib.load('random_forest_model.pkl')
     print("模型加载成功！")
     print(f"随机森林模型期望特征数: {rf_model.n_features_in_}")
@@ -32,60 +32,38 @@ dark_horses_cache = {
 }
 
 def prepare_features(df):
-    """准备 LightGBM 模型输入特征"""
     df = df.copy()
     
-    # 基础数值特征
-    numeric_cols = ['budget', 'director_facebook_likes', 'actor_1_facebook_likes',
-                    'actor_2_facebook_likes', 'actor_3_facebook_likes', 'movie_facebook_likes',
-                    'num_voted_users', 'num_user_for_reviews', 'imdb_score',
-                    'duration', 'title_year', 'facenumber_in_poster']
+    # 1. genres（保持原样）
+    if 'genres' not in df.columns:
+        df['genres'] = 'unknown'
+    else:
+        df['genres'] = df['genres'].fillna('unknown')
     
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            df[col] = df[col].fillna(0)
+    # 2. New_Director 判断
+    if 'director_facebook_likes' in df.columns:
+        df['New_Director'] = df['director_facebook_likes'].apply(
+            lambda x: 'No' if pd.isna(x) or float(x) == 0 else 'Yes'
+        )
+    else:
+        df['New_Director'] = 'No'
     
-    # log_budget
-    df['log_budget'] = np.log1p(df['budget'].fillna(0))
+    # 3. New_Actor 判断
+    if 'actor_1_facebook_likes' in df.columns:
+        df['New_Actor'] = df['actor_1_facebook_likes'].apply(
+            lambda x: 'No' if pd.isna(x) or float(x) == 0 else 'Yes'
+        )
+    else:
+        df['New_Actor'] = 'No'
     
-    # country_freq, language_freq
-    for col in ['country', 'language']:
-        if col in df.columns:
-            freq_map = df[col].value_counts().to_dict()
-            df[col + '_freq'] = df[col].map(freq_map).fillna(0)
-        else:
-            df[col + '_freq'] = 0
+    # 4. budget（确保数值型）
+    if 'budget' in df.columns:
+        df['budget'] = pd.to_numeric(df['budget'], errors='coerce').fillna(1000)
+    else:
+        df['budget'] = 1000
     
-    # genres 多标签编码
-    if 'genres' in df.columns:
-        df['genres_list'] = df['genres'].astype(str).str.split('|')
-        all_genres = set()
-        for genres in df['genres_list']:
-            all_genres.update(genres)
-        for genre in all_genres:
-            df[genre] = df['genres_list'].apply(lambda x: 1 if genre in x else 0)
-    
-    # content_rating one-hot
-    if 'content_rating' in df.columns:
-        df['content_rating'] = df['content_rating'].fillna('Unknown')
-        content_dummies = pd.get_dummies(df['content_rating'], prefix='content_rating')
-        df = pd.concat([df, content_dummies], axis=1)
-    
-    # 类别特征编码
-    categorical_cols = ['director_name', 'actor_1_name', 'actor_2_name', 'actor_3_name']
-    for col in categorical_cols:
-        if col in df.columns:
-            df[col] = df[col].fillna('unknown')
-            if col not in label_encoders:
-                label_encoders[col] = LabelEncoder()
-                df[col + '_cat'] = label_encoders[col].fit_transform(df[col])
-            else:
-                df[col + '_cat'] = df[col].map(lambda x: label_encoders[col].transform([x])[0] if x in label_encoders[col].classes_ else -1)
-        else:
-            df[col + '_cat'] = 0
-    
-    return df
+    # 返回所需特征
+    return df[['genres', 'New_Director', 'New_Actor', 'budget']]
 
 @app.route('/api/flask/dark_horses', methods=['GET'])
 def get_dark_horses():
@@ -94,10 +72,8 @@ def get_dark_horses():
         current_time = time.time()
         if (dark_horses_cache['data'] is not None and 
             current_time - dark_horses_cache['timestamp'] < dark_horses_cache['expire_seconds']):
-            print("返回缓存数据")
             return jsonify({"code": 200, "data": dark_horses_cache['data']})
         
-        print("重新计算预测...")
         response = requests.get(f"{NODE_API_URL}/movies")
         movies = response.json()
         df = pd.DataFrame(movies)
@@ -105,39 +81,42 @@ def get_dark_horses():
         if df.empty:
             return jsonify({"code": 200, "data": []})
         
-        # 数据清洗
-        df['budget'] = pd.to_numeric(df['budget'], errors='coerce')
-        df['imdb_score'] = pd.to_numeric(df['imdb_score'], errors='coerce')
-        df['num_voted_users'] = pd.to_numeric(df['num_voted_users'], errors='coerce')
-        df = df.dropna(subset=['budget', 'imdb_score', 'num_voted_users'])
-        df = df[df['budget'] > 0]
+        # 数据清洗（过滤 budget 为空的记录）
+        if 'budget' in df.columns:
+            df['budget'] = pd.to_numeric(df['budget'], errors='coerce')
+            df = df.dropna(subset=['budget'])
+            df = df[df['budget'] > 0]
+        else:
+            return jsonify({"code": 200, "data": []})
         
         if df.empty:
             return jsonify({"code": 200, "data": []})
         
-        # 准备特征
-        df = prepare_features(df)
+        # 准备特征（保留原始列用于结果展示）
+        df_features = prepare_features(df.copy())
         
-        # 获取模型特征名
-        feature_names = lgb_model.booster_.feature_name()
+        # 手动类别特征编码（临时方案）
+        cat_cols = ['genres', 'New_Director', 'New_Actor']
+        for col in cat_cols:
+            if col in df_features.columns:
+                if col in ['New_Director', 'New_Actor']:
+                    df_features[col] = df_features[col].apply(lambda x: 1 if str(x).strip().lower() == 'yes' else 0)
+                else:
+                    df_features[col] = df_features[col].apply(lambda x: hash(str(x)) % 2)
         
-        # 确保所有特征存在
-        for col in feature_names:
-            if col not in df.columns:
-                df[col] = 0
-        
-        # LightGBM 预测
-        X = df[feature_names]
+        # 使用新模型预测
+        X = df_features[['genres', 'New_Director', 'New_Actor', 'budget']]
         predictions = lgb_model.predict(X)
-        df['predicted_gross'] = np.expm1(predictions)
+        
+        # 将预测结果添加回原始 DataFrame
+        df['predicted_gross'] = predictions
         df['predicted_roi'] = df['predicted_gross'] / df['budget']
         
-        # 按ROI排序返回前30条
+        # 按 ROI 排序返回前 30 条
         dark_horses = df.sort_values('predicted_roi', ascending=False).head(30)
         
-        result = dark_horses[['movie_title', 'director_name', 'actor_1_name', 
-                              'budget', 'predicted_gross', 'predicted_roi', 
-                              'imdb_score', 'genres']].to_dict('records')
+        # 只返回 4 个核心字段 + 电影名
+        result = dark_horses[['movie_title', 'budget', 'predicted_gross', 'predicted_roi', 'genres']].to_dict('records')
         
         # 更新缓存
         dark_horses_cache['data'] = result
