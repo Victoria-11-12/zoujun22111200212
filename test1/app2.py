@@ -149,8 +149,10 @@ def predict_deep():
         print("构造的特征列表:", features)
         
         input_data = np.array([features])
-        predicted = rf_model.predict(input_data)[0]
-        print("模型预测的原始值:", predicted)
+        predicted_log = rf_model.predict(input_data)[0]
+        predicted = np.expm1(predicted_log)  # 对数转换回原始票房
+        print("模型预测的对数值:", predicted_log)
+        print("转换后的票房预测:", predicted)
         
         return jsonify({"code": 200, "predicted_gross": float(predicted)})
     except Exception as e:
