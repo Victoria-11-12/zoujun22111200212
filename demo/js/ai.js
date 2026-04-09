@@ -58,6 +58,8 @@
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
             }
             
+            let currentAITextNode = null;
+            
             function startAIMessage() {
                 currentAIMessageDiv = document.createElement('div');
                 currentAIMessageDiv.className = 'ai-message ai-message-ai';
@@ -67,19 +69,27 @@
                 aiChatContainer.appendChild(currentAIMessageDiv);
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
                 currentAIContent = '';
+                currentAITextNode = null;
             }
             
             function appendAIMessage(text) {
                 if (!currentAIMessageDiv) return;
                 currentAIContent += text;
                 const messageContent = currentAIMessageDiv.querySelector('.ai-message-content');
-                messageContent.innerHTML = currentAIContent.replace(/\n/g, '<br>');
+                // 使用单个文本节点，通过data属性更新内容，实现打字机效果
+                if (!currentAITextNode) {
+                    currentAITextNode = document.createTextNode(text);
+                    messageContent.appendChild(currentAITextNode);
+                } else {
+                    currentAITextNode.data += text;
+                }
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
             }
             
             function endAIMessage() {
                 currentAIMessageDiv = null;
                 currentAIContent = '';
+                currentAITextNode = null;
             }
 
             function scrollToBottom() {
@@ -158,7 +168,7 @@
                 // 管理员模式 - 使用 AI 解析复杂指令
                 if (aiState === 'admin') {
                     try {
-                        const response = await fetch('http://localhost:3000/api/admin/ai/stream', {
+                        const response = await fetch('http://localhost:5000/api/admin/ai/stream', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ message, sessionId })
@@ -212,7 +222,7 @@
                 }
 
                 try {
-                    const response = await fetch('http://localhost:3000/api/ai/stream', {
+                    const response = await fetch('http://localhost:5000/api/ai/stream', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message, sessionId })
