@@ -168,7 +168,7 @@
                 // 管理员模式 - 使用 AI 解析复杂指令
                 if (aiState === 'admin') {
                     try {
-                        const response = await fetch('http://localhost:5000/api/admin/ai/stream', {
+                        const response = await fetch('http://localhost:8000/api/admin/ai/stream', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ message, sessionId })
@@ -222,7 +222,7 @@
                 }
 
                 try {
-                    const response = await fetch('http://localhost:5000/api/ai/stream', {
+                    const response = await fetch('http://localhost:8000/api/ai/stream', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message, sessionId })
