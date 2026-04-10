@@ -40,26 +40,26 @@
 
             let currentAIMessageDiv = null;
             let currentAIContent = '';
-            
+            let renderTimer = null;
+
             function addMessage(content, isUser) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `ai-message ${isUser ? 'ai-message-user' : 'ai-message-ai'}`;
-                
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'ai-message-content';
+
                 if (isUser) {
-                    messageDiv.innerHTML = `<div class="ai-message-content">${content}</div>`;
+                    messageContent.textContent = content;
                 } else {
-                    const messageContent = document.createElement('div');
-                    messageContent.className = 'ai-message-content';
-                    messageContent.innerHTML = content;
-                    messageDiv.appendChild(messageContent);
+                    messageContent.innerHTML = marked.parse(content);
                 }
-                
+
+                messageDiv.appendChild(messageContent);
                 aiChatContainer.appendChild(messageDiv);
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
             }
-            
-            let currentAITextNode = null;
-            
+
             function startAIMessage() {
                 currentAIMessageDiv = document.createElement('div');
                 currentAIMessageDiv.className = 'ai-message ai-message-ai';
@@ -70,29 +70,28 @@
                 aiChatContainer.appendChild(currentAIMessageDiv);
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
                 currentAIContent = '';
-                currentAITextNode = null;
             }
-            
+
             function appendAIMessage(text) {
                 if (!currentAIMessageDiv) return;
                 currentAIContent += text;
                 const messageContent = currentAIMessageDiv.querySelector('.ai-message-content');
-                // 使用单个文本节点，通过data属性更新内容，实现打字机效果
-                if (!currentAITextNode) {
-                    // 首次追加内容时清除"思考中"提示
-                    messageContent.innerHTML = '';
-                    currentAITextNode = document.createTextNode(text);
-                    messageContent.appendChild(currentAITextNode);
-                } else {
-                    currentAITextNode.data += text;
-                }
-                aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
+
+                clearTimeout(renderTimer);
+                renderTimer = setTimeout(() => {
+                    messageContent.innerHTML = marked.parse(currentAIContent);
+                    aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
+                }, 30);
             }
-            
+
             function endAIMessage() {
+                if (currentAIMessageDiv) {
+                    const messageContent = currentAIMessageDiv.querySelector('.ai-message-content');
+                    messageContent.innerHTML = marked.parse(currentAIContent);
+                }
+                clearTimeout(renderTimer);
                 currentAIMessageDiv = null;
                 currentAIContent = '';
-                currentAITextNode = null;
             }
 
             function scrollToBottom() {

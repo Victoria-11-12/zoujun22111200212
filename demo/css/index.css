@@ -800,6 +800,94 @@ h2 {
   border-bottom-left-radius: 2px;
 }
 
+/* Markdown渲染样式 */
+.ai-message-content h1,
+.ai-message-content h2,
+.ai-message-content h3,
+.ai-message-content h4 {
+  margin: 0.8rem 0 0.5rem;
+  color: #e0f4ff;
+  font-weight: 600;
+}
+
+.ai-message-content h1 { font-size: 1rem; }
+.ai-message-content h2 { font-size: 0.9rem; }
+.ai-message-content h3 { font-size: 0.8rem; }
+
+.ai-message-content p {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+
+.ai-message-content ul,
+.ai-message-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+}
+
+.ai-message-content li {
+  margin: 0.2rem 0;
+}
+
+.ai-message-content table {
+  border-collapse: collapse;
+  margin: 0.8rem 0;
+  width: 100%;
+  font-size: 0.7rem;
+}
+
+.ai-message-content th,
+.ai-message-content td {
+  border: 1px solid rgba(76, 155, 253, 0.3);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.ai-message-content th {
+  background: rgba(76, 155, 253, 0.15);
+  font-weight: 600;
+  color: #4c9bfd;
+}
+
+.ai-message-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-message-content code {
+  background: rgba(76, 155, 253, 0.15);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: #4c9bfd;
+}
+
+.ai-message-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.6rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.ai-message-content pre code {
+  background: none;
+  padding: 0;
+  color: #d0e8ff;
+}
+
+.ai-message-content strong {
+  color: #4c9bfd;
+  font-weight: 600;
+}
+
+.ai-message-content blockquote {
+  border-left: 3px solid rgba(76, 155, 253, 0.4);
+  margin: 0.5rem 0;
+  padding-left: 0.8rem;
+  color: rgba(208, 232, 255, 0.8);
+}
+
 .ai-input-area {
   display: flex;
   flex-direction: column;

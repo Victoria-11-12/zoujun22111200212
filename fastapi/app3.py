@@ -41,6 +41,7 @@ llm = ChatOpenAI(
 
 DB_URI = f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 db = SQLDatabase.from_uri(DB_URI)
+db_user = SQLDatabase.from_uri(DB_URI, include_tables=['movies'])
 print(f"数据库连接成功，可用表: {db.get_usable_table_names()}")
 
 # ============================================================
@@ -106,7 +107,7 @@ def log_admin_chat(session_id: str, role: str, content: str, user_name: str = ""
 # 三、SQL Agent（普通用户查电影数据）
 # ============================================================
 
-user_toolkit = SQLDatabaseToolkit(db=db, llm=llm)
+user_toolkit = SQLDatabaseToolkit(db=db_user, llm=llm)
 sql_agent = create_sql_agent(
     llm=llm,
     toolkit=user_toolkit,
