@@ -65,6 +65,7 @@
                 currentAIMessageDiv.className = 'ai-message ai-message-ai';
                 const messageContent = document.createElement('div');
                 messageContent.className = 'ai-message-content';
+                messageContent.innerHTML = '<span class="ai-thinking">🤖思考中</span>';
                 currentAIMessageDiv.appendChild(messageContent);
                 aiChatContainer.appendChild(currentAIMessageDiv);
                 aiChatContainer.scrollTop = aiChatContainer.scrollHeight;
@@ -78,6 +79,8 @@
                 const messageContent = currentAIMessageDiv.querySelector('.ai-message-content');
                 // 使用单个文本节点，通过data属性更新内容，实现打字机效果
                 if (!currentAITextNode) {
+                    // 首次追加内容时清除"思考中"提示
+                    messageContent.innerHTML = '';
                     currentAITextNode = document.createTextNode(text);
                     messageContent.appendChild(currentAITextNode);
                 } else {
@@ -171,7 +174,7 @@
                         const response = await fetch('http://localhost:8000/api/admin/ai/stream', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ message, sessionId })
+                            body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '' })
                         });
 
                         if (!response.ok) {
@@ -225,7 +228,7 @@
                     const response = await fetch('http://localhost:8000/api/ai/stream', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message, sessionId })
+                        body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '' })
                     });
 
                     if (!response.ok) {

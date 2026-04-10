@@ -64,6 +64,44 @@ def save_history(session_id: str, user_msg: str, ai_msg: str):
     conversation_history[session_id] = history
 
 
+#日志处理
+MODEL_NAME = os.getenv('MODEL_NAME', 'unknown')
+
+def log_user_chat(session_id: str, role: str, content: str, intent: str = None, user_name: str = ""):
+    try:
+        conn = pymysql.connect(
+            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
+        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO user_chat_logs (session_id, user_name, role, content, intent, model_name) VALUES (%s, %s, %s, %s, %s, %s)",
+                (session_id, user_name, role, content, intent, MODEL_NAME)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"用户日志记录失败: {e}")
+    finally:
+        conn.close()
+
+
+def log_admin_chat(session_id: str, role: str, content: str, user_name: str = ""):
+    try:
+        conn = pymysql.connect(
+            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
+        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO admin_chat_logs (session_id, user_name, role, content, model_name) VALUES (%s, %s, %s, %s, %s)",
+                (session_id, user_name, role, content, MODEL_NAME)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"管理员日志记录失败: {e}")
+    finally:
+        conn.close()
+
 # ============================================================
 # 三、SQL Agent（普通用户查电影数据）
 # ============================================================
@@ -151,29 +189,30 @@ wrap_chain = (
 # 七、流式生成器（异步）- 传入历史
 # ============================================================
 
-async def direct_reply_stream(message: str, session_id: str):
-    """不查数据库，直接回复，真流式"""
+async def direct_reply_stream(message: str, session_id: str, intent: str = None, user_name: str = ""):
     history = get_history(session_id)
+    log_user_chat(session_id, "user", message, intent=intent, user_name=user_name)  # 记用户
     reply = ''
     async for chunk in direct_chain.astream({"message": message, "history": history}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
     save_history(session_id, message, reply)
+    log_user_chat(session_id, "ai", reply, intent=intent, user_name=user_name)  # 记AI
 
 
-async def sql_query_stream(message: str, session_id: str):
-    """查数据库，拿到结果后流式输出回复"""
+async def sql_query_stream(message: str, session_id: str, intent: str = None, user_name: str = ""):
     history = get_history(session_id)
+    log_user_chat(session_id, "user", message, intent=intent, user_name=user_name)
     result = await sql_agent.ainvoke({"input": message})
     sql_result = result.get('output', '')
-
     reply = ''
     async for chunk in wrap_chain.astream({"question": message, "result": sql_result, "history": history}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
     save_history(session_id, message, reply)
+    log_user_chat(session_id, "ai", reply, intent=intent, user_name=user_name)
 
 
 # ============================================================
@@ -183,6 +222,7 @@ async def sql_query_stream(message: str, session_id: str):
 class ChatRequest(BaseModel):
     message: str
     sessionId: str = ""
+    username: str = ""
 
 
 @app.post("/api/ai/stream")
@@ -200,10 +240,10 @@ async def ai_stream(request: ChatRequest):
 
             # 2. 根据意图选择处理方式
             if "DIRECT_REPLY" in intent:
-                async for chunk in direct_reply_stream(message, session_id):
+                async for chunk in direct_reply_stream(message, session_id, intent=intent, user_name=request.username):
                     yield chunk
             else:
-                async for chunk in sql_query_stream(message, session_id):
+                async for chunk in sql_query_stream(message, session_id, intent=intent, user_name=request.username):
                     yield chunk
 
         except Exception as e:
@@ -288,6 +328,8 @@ async def admin_ai_stream(request: ChatRequest):
 
     async def generate():
         try:
+
+            log_admin_chat(session_id, "user", message, user_name=request.username)
             result = await admin_executor.ainvoke({"input": message, "history": history})
             agent_reply = result.get('output', '')
 
@@ -297,6 +339,7 @@ async def admin_ai_stream(request: ChatRequest):
                 yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
             save_history(session_id, message, agent_reply)
+            log_admin_chat(session_id, "ai", agent_reply, user_name=request.username)
 
         except Exception as e:
             print(f"AI 管理员接口报错: {e}")
