@@ -400,7 +400,6 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 4. 不要使用 set_global_options，不要在 InitOpts 中设置 font_family（pyecharts 2.x 不支持）
 5. 输出格式：用 ```python 和 ``` 包裹代码，不要输出任何其他文字
 6. 代码最后一行必须是：CHART_HTML = chart.render_embed()
-
 图表规范：
 7. X轴和Y轴必须设置 name 属性显示数据含义，例如：
    xaxis_opts=opts.AxisOpts(name="电影名称"), yaxis_opts=opts.AxisOpts(name="票房（美元）")
@@ -408,6 +407,26 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
    toolbox_opts=opts.ToolboxOpts(feature=opts.ToolBoxFeatureOpts(save_as_image=True))
 9. 图表标题通过 set_global_opts 的 title_opts 设置（注意：set_global_opts 是图表实例的方法，不是独立函数）
 10. 柱状图/折线图数据较多时，X轴标签倾斜显示：axislabel_opts=opts.LabelOpts(rotate=30)
+11.【重要】所有图表都必须包含 toolbox_opts，否则用户无法下载图片！
+     以下是一个正确的示例：
+
+```python
+from pyecharts import options as opts
+from pyecharts.charts import Bar
+
+chart = Bar()
+chart.add_xaxis(["电影A", "电影B"])
+chart.add_yaxis("票房", [100, 200])
+chart.set_global_opts(
+    title_opts=opts.TitleOpts(title="票房对比"),
+    xaxis_opts=opts.AxisOpts(name="电影"),
+    yaxis_opts=opts.AxisOpts(name="票房（美元）"),
+    toolbox_opts=opts.ToolboxOpts(feature=opts.ToolBoxFeatureOpts(save_as_image=True))
+)
+CHART_HTML = chart.render_embed()
+```
+
+请按以上格式生成代码。
 """),
     ("user", "用户需求：{question}\n\n查询结果：\n{data}\n\n{feedback}")
 ])
