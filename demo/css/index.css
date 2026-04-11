@@ -821,9 +821,7 @@ h2 {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(76, 155, 253, 0.15);
   border-radius: 2px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
 }
 
 .canvas-placeholder {
@@ -987,4 +985,71 @@ h2 {
   margin: 0.5rem 0;
   padding-left: 0.8rem;
   color: rgba(208, 232, 255, 0.8);
+}
+
+/* 图表包装器样式 - 修复图表显示问题 */
+.chart-iframe-wrapper {
+  width: 100%;
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.chart-iframe-wrapper iframe {
+  width: 100%;
+  height: 450px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 图表消息气泡样式 */
+.chart-msg {
+  display: flex;
+  margin-bottom: 0.8rem;
+  animation: messageIn 0.3s ease;
+  width: 100%;
+}
+
+.chart-msg-user {
+  justify-content: flex-end;
+}
+
+.chart-msg-ai {
+  justify-content: flex-start;
+}
+
+.chart-msg .message-content {
+  max-width: 80%;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.chart-msg-user .message-content {
+  background: linear-gradient(135deg, rgba(76, 155, 253, 0.3), rgba(2, 166, 181, 0.3));
+  border: 1px solid rgba(76, 155, 253, 0.4);
+  color: #e0f4ff;
+  border-bottom-right-radius: 2px;
+}
+
+.chart-msg-ai .message-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(76, 155, 253, 0.2);
+  color: #d0e8ff;
+  border-bottom-left-radius: 2px;
+}
+
+/* 图表生成中提示 */
+.chart-generating {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  color: rgba(76, 155, 253, 0.7);
+  font-size: 0.75rem;
+  animation: pulse 1.5s ease-in-out infinite;
 }

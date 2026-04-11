@@ -119,7 +119,8 @@ sql_agent = create_sql_agent(
 - 只能执行 SELECT 查询
 - 严禁执行 DROP、ALTER、CREATE、DELETE、UPDATE 等操作
 - 如果用户的问题与电影数据无关，礼貌地告知你只能回答电影相关的问题
-- 如果是绘图相关问题，只查询针对要求数据，不查询其他数据，例如：绘制2015年上映电影的评分分布直方图，只查询评分。"""
+- 如果是绘图相关问题，只查询针对要求数据，不查询其他数据，例如：绘制2015年上映电影的评分分布直方图，只查询评分。
+"""
 )
 
 # ============================================================
@@ -396,35 +397,21 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 1. 只能使用 pyecharts、pandas、numpy
 2. 不要使用 render() 写文件，必须用 render_embed() 将图表渲染为 HTML 字符串，赋值给变量 CHART_HTML
 3. 根据用户需求选择合适的图表类型（柱状图、折线图、饼图、散点图、雷达图等）
-4. 不要使用 set_global_options，不要在 InitOpts 中设置 font_family
+4. 不要使用 set_global_options，不要在 InitOpts 中设置 font_family（pyecharts 2.x 不支持）
 5. 输出格式：用 ```python 和 ``` 包裹代码，不要输出任何其他文字
 6. 代码最后一行必须是：CHART_HTML = chart.render_embed()
+
+图表规范：
+7. X轴和Y轴必须设置 name 属性显示数据含义，例如：
+   xaxis_opts=opts.AxisOpts(name="电影名称"), yaxis_opts=opts.AxisOpts(name="票房（美元）")
+8. 必须添加工具箱（支持保存图片），例如：
+   toolbox_opts=opts.ToolboxOpts(feature=opts.ToolBoxFeatureOpts(save_as_image=True))
+9. 图表标题通过 set_global_opts 的 title_opts 设置（注意：set_global_opts 是图表实例的方法，不是独立函数）
+10. 柱状图/折线图数据较多时，X轴标签倾斜显示：axislabel_opts=opts.LabelOpts(rotate=30)
 """),
     ("user", "用户需求：{question}\n\n查询结果：\n{data}\n\n{feedback}")
 ])
 python_chart_chain = python_chart_prompt | llm | StrOutputParser()
-
-#反思链（只做安全检查，不做代码风格/正确性检查）
-reflect_prompt = ChatPromptTemplate.from_messages([
-   ("system", """你是一个代码安全审查员，只检查代码是否包含危险操作。
-
-危险操作（出现任一则不通过）：
-1. 导入了 os、sys、subprocess、shutil、requests、urllib、socket 模块
-2. 使用了 exec()、eval()、compile()、__import__() 函数
-3. 使用了 open() 进行文件读写
-4. 访问了 os.environ 或其他环境变量
-
-以下都是安全的，不要报错：
-- pyecharts（包括 set_global_options、render、render_embed 等所有方法）
-- pandas、numpy、json
-- print()、len()、range()、sorted() 等 Python 内置函数
-
-如果代码安全，只回复：PASS
-如果代码不安全，回复：FAIL: [具体原因]
-不要输出其他任何内容。"""),
-    ("user", "{code}")
-])
-reflect_chain = reflect_prompt | llm | StrOutputParser()
 
 #无调用的图表回复函数
 async def nochart_reply_stream(chart_message):
@@ -453,47 +440,30 @@ async def chart_generate_stream(chart_message: str):
         return
 
 
-    # 2. 写代码 + 反思循环（最多 3 轮）
-    feedback = ""
-    code = ""
-    for i in range(3):
-        print(f"[绘图] 第 {i+1} 轮代码生成...")
-        try:
-            code = await python_chart_chain.ainvoke({
-                "question": chart_message,
-                "data": data,
-                "feedback": feedback
-            })
-            print(f"[绘图] 代码生成完成，长度: {len(code)}")
-        except Exception as e:
-            print(f"[绘图] 代码生成失败: {e}")
-            import traceback
-            traceback.print_exc()
-            yield f"data: {json.dumps({'content': '代码生成失败，请重试'}, ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
-            return
+    # 2. 生成代码（只调一次）
+    print("[绘图] 开始生成代码...")
+    try:
+        code = await python_chart_chain.ainvoke({
+            "question": chart_message,
+            "data": data,
+            "feedback": ""
+        })
+        print(f"[绘图] 代码生成完成，长度: {len(code)}")
+    except Exception as e:
+        print(f"[绘图] 代码生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        yield f"data: {json.dumps({'content': '代码生成失败，请重试'}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
-        print(f"[绘图] 开始反思检查...")
-        try:
-            reflection = await reflect_chain.ainvoke({
-                "code": code
-            })
-            print(f"[绘图] 反思结果: {reflection[:100]}")
-        except Exception as e:
-            print(f"[绘图] 反思检查失败: {e}")
-            reflection = "FAIL"
-
-        if "PASS" in reflection:
-            print("[绘图] 代码通过检查")
-            break
-
-        feedback = reflection
-
-    else:
-        print("[绘图] 3轮反思均未通过")
+    # 2.5 简单检查（不调 LLM，纯字符串匹配）
+    if "CHART_HTML" not in code:
+        print("[绘图] 代码检查未通过：缺少 CHART_HTML")
         yield f"data: {json.dumps({'content': '图表生成失败，请重试'}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
         return
+    print("[绘图] 代码检查通过")
 
     # 3. 安全检查
     print("[绘图] 开始安全检查...")
@@ -527,9 +497,10 @@ async def chart_generate_stream(chart_message: str):
         if not chart_html:
             raise ValueError("代码执行成功但未生成图表（CHART_HTML 为空）")
         # render_embed() 只返回 <div> 片段，需要包成完整 HTML 页面
+        # 用本地 echarts.js（Node.js:3000 静态服务），避免 CDN 被代理拦截
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"><\/script>
+<script src="http://localhost:3000/js/echarts.js"><\/script>
 <style>html,body{{margin:0;padding:0;width:100%;height:100%;}}</style>
 </head><body>{chart_html}<script>
 var charts=document.querySelectorAll('div[_echarts_instance_]');

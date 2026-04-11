@@ -294,7 +294,10 @@
         function addChartMessage(content, isUser) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chart-msg ' + (isUser ? 'chart-msg-user' : 'chart-msg-ai');
-            msgDiv.textContent = content;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            msgDiv.appendChild(contentDiv);
             chartCanvasContainer.appendChild(msgDiv);
             chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
             return msgDiv;
@@ -372,7 +375,10 @@
                                         } else if (parsed.content) {
                                             // 收到文字内容 → 更新气泡
                                             fullContent += parsed.content;
-                                            aiMsgDiv.textContent = fullContent;
+                                            const contentEl = aiMsgDiv.querySelector('.message-content');
+                                            if (contentEl) {
+                                                contentEl.textContent = fullContent;
+                                            }
                                             chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
                                         }
                                     } catch (e) {
@@ -383,7 +389,10 @@
                     }
                 } catch (err) {
                     console.error(err);
-                    aiMsgDiv.textContent = '网络错误，请稍后重试。';
+                    const contentEl = aiMsgDiv.querySelector('.message-content');
+                    if (contentEl) {
+                        contentEl.textContent = '网络错误，请稍后重试。';
+                    }
                 } finally {
                     generateChartBtn.disabled = false;
                 }
