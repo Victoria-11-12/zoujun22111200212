@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI,Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
@@ -118,7 +118,8 @@ sql_agent = create_sql_agent(
 注意：
 - 只能执行 SELECT 查询
 - 严禁执行 DROP、ALTER、CREATE、DELETE、UPDATE 等操作
-- 如果用户的问题与电影数据无关，礼貌地告知你只能回答电影相关的问题"""
+- 如果用户的问题与电影数据无关，礼貌地告知你只能回答电影相关的问题
+- 如果是绘图相关问题，只查询针对要求数据，不查询其他数据，例如：绘制2015年上映电影的评分分布直方图，只查询评分。"""
 )
 
 # ============================================================
@@ -356,171 +357,232 @@ async def admin_ai_stream(request: ChatRequest):
     )
 
 
-# #=======================================
-# #在线绘图
+#=======================================
+#在线绘图
 
-# #绘图判断链
-# chart_intent_prompt = ChatPromptTemplate.from_messages([
-#     ('system', """你是绘图助手，可以根据用户输入判断是否需要绘图。
-# 注意：
-# - 只能判断是否需要绘图，不能绘制图片
-# - 若用户输入中包含图片描述，需要判断是否需要绘图
-# - 若用户输入中不包含图片描述，需要判断是否需要绘图
-# - 回复简明直接，不要废话
-# - 若需要回绘图，回复'IN_CHART'，若不需要回绘图，回复'NOT_CHART'
-     
-# - 需要绘图的情况：帮我绘制2013年电影的票房趋势图；帮我绘制电影A和电影B的雷达对比图     
-# - 不需要绘图的情况：帮我查询2013年电影的票房数据；‘你好’等日常聊天
-# """),
-#     ('user', '{question}'),
-# ])
+#绘图判断链
+chart_intent_prompt = ChatPromptTemplate.from_messages([
+    ('system', """你是绘图助手，可以根据用户输入判断是否需要绘图。
+注意：
+- 只能判断是否需要绘图，不能绘制图片
+- 若用户输入中包含图片描述，需要判断是否需要绘图
+- 若用户输入中不包含图片描述，需要判断是否需要绘图
+- 回复简明直接，不要废话
+- 若需要回绘图，回复'IN_CHART'，若不需要回绘图，回复'NOT_CHART'
 
-# chart_intent_chain = chart_intent_prompt | llm | StrOutputParser()
+- 需要绘图的情况：帮我绘制2013年电影的票房趋势图；帮我绘制电影A和电影B的雷达对比图
+- 不需要绘图的情况：帮我查询2013年电影的票房数据；'你好'等日常聊天
+"""),
+    ('user', '{question}'),
+])
 
-# #不绘图直接回复链
-# chart_not_prompt = ChatPromptTemplate.from_messages([
-#     ('system', '''
-#     根据用户的请求，做出相应的回复，并告知自己只能进行绘图，无法进行其他操作。
-#     回答要礼貌友好，不要废话
-# '''),
-#     ('user', '{question}'),
-# ])
-# chart_not_chain = chart_not_prompt | llm | StrOutputParser()
+chart_intent_chain = chart_intent_prompt | llm | StrOutputParser()
 
-# #python 绘图代码链
+#不绘图直接回复链
+chart_not_prompt = ChatPromptTemplate.from_messages([
+    ('system', '''
+    根据用户的请求，做出相应的回复，并告知自己只能进行绘图，无法进行其他操作。
+    回答要礼貌友好，不要废话
+'''),
+    ('user', '{question}'),
+])
+chart_not_chain = chart_not_prompt | llm | StrOutputParser()
 
-# python_chart_prompt = ChatPromptTemplate.from_messages([
-#     ("system", """你是一个 Python 可视化工程师，根据用户需求和查询结果，使用 pyecharts 生成图表代码。
+#python 绘图代码链
+python_chart_prompt = ChatPromptTemplate.from_messages([
+    ("system", """你是一个 Python 可视化工程师，根据用户需求和查询结果，使用 pyecharts 生成图表代码。
 
-# 要求：
-# 1. 只能使用 pyecharts、pandas、numpy
-# 2. 必须渲染到 /tmp/chart.html
-# 3. 设置中文字体：from pyecharts.options import set_global_options; set_global_options(opts.InitOpts(font_family='Microsoft YaHei'))
-# 4. 根据用户需求选择合适的图表类型（柱状图、折线图、饼图、散点图、雷达图等）
-# 5. 只输出 Python 代码，不要任何解释
-# """),
-#     ("user", "用户需求：{question}\n\n查询结果：\n{data}\n\n{feedback}")
-# ]) 
-# python_chart_chain = python_chart_prompt | llm | StrOutputParser()
+要求：
+1. 只能使用 pyecharts、pandas、numpy
+2. 不要使用 render() 写文件，必须用 render_embed() 将图表渲染为 HTML 字符串，赋值给变量 CHART_HTML
+3. 根据用户需求选择合适的图表类型（柱状图、折线图、饼图、散点图、雷达图等）
+4. 不要使用 set_global_options，不要在 InitOpts 中设置 font_family
+5. 输出格式：用 ```python 和 ``` 包裹代码，不要输出任何其他文字
+6. 代码最后一行必须是：CHART_HTML = chart.render_embed()
+"""),
+    ("user", "用户需求：{question}\n\n查询结果：\n{data}\n\n{feedback}")
+])
+python_chart_chain = python_chart_prompt | llm | StrOutputParser()
 
-# #反思链
-# reflect_prompt = ChatPromptTemplate.from_messages([
-#    ("system", """你是一个代码审查员，检查 Python 代码的安全性和正确性。
+#反思链（只做安全检查，不做代码风格/正确性检查）
+reflect_prompt = ChatPromptTemplate.from_messages([
+   ("system", """你是一个代码安全审查员，只检查代码是否包含危险操作。
 
-# 检查项：
-# 1. 是否导入了危险模块（os、sys、subprocess、shutil）→ 不通过
-# 2. render 路径是否为 /tmp/chart.html → 不通过则要求修改
-# 3. 是否只使用了 pyecharts、pandas、numpy → 不通过
-# 4. 图表类型是否匹配用户需求 → 不匹配则要求修改
-# 5. 是否设置了中文字体 → 没设置则要求添加
+危险操作（出现任一则不通过）：
+1. 导入了 os、sys、subprocess、shutil、requests、urllib、socket 模块
+2. 使用了 exec()、eval()、compile()、__import__() 函数
+3. 使用了 open() 进行文件读写
+4. 访问了 os.environ 或其他环境变量
 
-# 如果代码没问题，回复：PASS
-# 如果代码有问题，回复：FAIL + 具体修改建议"""),
-#     ("user", "用户需求：{question}\n\n代码：\n{code}")
-# ]) 
-# reflect_chain = reflect_prompt | llm | StrOutputParser()
+以下都是安全的，不要报错：
+- pyecharts（包括 set_global_options、render、render_embed 等所有方法）
+- pandas、numpy、json
+- print()、len()、range()、sorted() 等 Python 内置函数
 
-# #无调用的图表回复函数
-# async def nochart_reply_stream(chart_message):
- 
-#     reply = ''
-#     async for chunk in chart_not_chain.astream({"question": chart_message}):
-#         reply += chunk
-#         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
-#     yield "data: [DONE]\n\n"
+如果代码安全，只回复：PASS
+如果代码不安全，回复：FAIL: [具体原因]
+不要输出其他任何内容。"""),
+    ("user", "{code}")
+])
+reflect_chain = reflect_prompt | llm | StrOutputParser()
+
+#无调用的图表回复函数
+async def nochart_reply_stream(chart_message):
+
+    reply = ''
+    async for chunk in chart_not_chain.astream({"question": chart_message}):
+        reply += chunk
+        yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
+    yield "data: [DONE]\n\n"
 
 
-# #绘图调用的图表生成函数
-# async def chart_generate_stream(chart_message: str):
-#     """在线绘图主流程"""
-    
-#     # 1. SQL Agent 查数据
-#     try:
-#         sql_result = await sql_agent.ainvoke({"input": chart_message})
-#         data = sql_result.get("output", "")
-#     except Exception as e:
-#         yield f"data: {json.dumps({'content': f'数据查询失败：{str(e)}'}, ensure_ascii=False)}\n\n"
-#         yield "data: [DONE]\n\n"
-#         return
-    
+#绘图调用的图表生成函数
+async def chart_generate_stream(chart_message: str):
+    """在线绘图主流程"""
 
-#     # 2. 写代码 + 反思循环（最多 3 轮）
-#     feedback = ""
-#     for i in range(3):
-#         try:
-#             code = await python_chart_chain.ainvoke({
-#                 "question": chart_message,
-#                 "data": data,
-#                 "feedback": feedback
-#             })
-#         except Exception as e:
-#             yield f"data: {json.dumps({'content': '代码生成失败，请重试'}, ensure_ascii=False)}\n\n"
-#             yield "data: [DONE]\n\n"
-#             return
+    # 1. SQL Agent 查数据
+    print("[绘图] 开始查询数据库...")
+    try:
+        sql_result = await sql_agent.ainvoke({"input": chart_message})
+        data = sql_result.get("output", "")
+        print(f"[绘图] 数据库查询完成，结果长度: {len(data)}")
+    except Exception as e:
+        print(f"[绘图] 数据库查询失败: {e}")
+        yield f"data: {json.dumps({'content': f'数据查询失败：{str(e)}'}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
-#         try:
-#             reflection = await reflect_chain.ainvoke({
-#                 "question": chart_message,
-#                 "code": code
-#             })
-#         except Exception as e:
-#             reflection = "FAIL"
 
-#         if "PASS" in reflection:
-#             break
+    # 2. 写代码 + 反思循环（最多 3 轮）
+    feedback = ""
+    code = ""
+    for i in range(3):
+        print(f"[绘图] 第 {i+1} 轮代码生成...")
+        try:
+            code = await python_chart_chain.ainvoke({
+                "question": chart_message,
+                "data": data,
+                "feedback": feedback
+            })
+            print(f"[绘图] 代码生成完成，长度: {len(code)}")
+        except Exception as e:
+            print(f"[绘图] 代码生成失败: {e}")
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'content': '代码生成失败，请重试'}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+            return
 
-#         feedback = reflection
+        print(f"[绘图] 开始反思检查...")
+        try:
+            reflection = await reflect_chain.ainvoke({
+                "code": code
+            })
+            print(f"[绘图] 反思结果: {reflection[:100]}")
+        except Exception as e:
+            print(f"[绘图] 反思检查失败: {e}")
+            reflection = "FAIL"
 
-#     else:
-#         yield f"data: {json.dumps({'content': '图表生成失败，请重试'}, ensure_ascii=False)}\n\n"
-#         yield "data: [DONE]\n\n"
-#         return
-    
-#     # 3. 安全检查
-#     allowed = ["pyecharts", "pandas", "numpy", "json"]
-#     for line in code.split("\n"):
-#         if line.startswith("import ") or line.startswith("from "):
-#             module = line.split()[1].split(".")[0]
-#             if module not in allowed:
-#                 yield f"data: {json.dumps({'content': '代码安全检查未通过，请重试'}, ensure_ascii=False)}\n\n"
-#                 yield "data: [DONE]\n\n"
-#                 return
+        if "PASS" in reflection:
+            print("[绘图] 代码通过检查")
+            break
 
-#     # 4. 执行代码
-#     try:
-#         exec(code)
-#         with open("/tmp/chart.html", "r", encoding="utf-8") as f:
-#             chart_html = f.read()
-#     except Exception as e:
-#         yield f"data: {json.dumps({'content': f'图表执行失败：{str(e)}'}, ensure_ascii=False)}\n\n"
-#         yield "data: [DONE]\n\n"
-#         return
+        feedback = reflection
 
-#     # 5. 返回图表
-#     yield f"data: {json.dumps({'type': 'chart', 'chart_html': chart_html}, ensure_ascii=False)}\n\n"
-#     yield "data: [DONE]\n\n"
+    else:
+        print("[绘图] 3轮反思均未通过")
+        yield f"data: {json.dumps({'content': '图表生成失败，请重试'}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
-# #图表接口
-# class ChatRequest(BaseModel):
-#     chart_message: str
-#     sessionId: str = ""
+    # 3. 安全检查
+    print("[绘图] 开始安全检查...")
+    allowed = ["pyecharts", "pandas", "numpy", "json"]
+    for line in code.split("\n"):
+        if line.startswith("import ") or line.startswith("from "):
+            module = line.split()[1].split(".")[0]
+            if module not in allowed:
+                print(f"[绘图] 安全检查未通过: {module}")
+                yield f"data: {json.dumps({'content': '代码安全检查未通过，请重试'}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+    print("[绘图] 安全检查通过")
 
-# @app.post("/api/chart/generate")
-# async def chart_generate(request: ChatRequest):
-#     chart_message = request.chart_message
+    # 3.5 提取代码块（去除 ```python ... ``` 标记）
+    import re
+    code_match = re.search(r'```python\s*(.*?)```', code, re.DOTALL)
+    if code_match:
+        code = code_match.group(1).strip()
+        print(f"[绘图] 已提取代码块，长度: {len(code)}")
+    else:
+        code = code.strip()
+        print(f"[绘图] 无代码块标记，直接使用，长度: {len(code)}")
 
-#     async def generate():
-#         intent = await chart_intent_chain.ainvoke({"question": chart_message})
-#         intent = intent.strip().upper()
+    # 4. 执行代码
+    print("[绘图] 开始执行代码...")
+    try:
+        local_vars = {}
+        exec(code, {"__builtins__": __builtins__}, local_vars)
+        chart_html = local_vars.get('CHART_HTML', '')
+        if not chart_html:
+            raise ValueError("代码执行成功但未生成图表（CHART_HTML 为空）")
+        # render_embed() 只返回 <div> 片段，需要包成完整 HTML 页面
+        chart_html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"><\/script>
+<style>html,body{{margin:0;padding:0;width:100%;height:100%;}}</style>
+</head><body>{chart_html}<script>
+var charts=document.querySelectorAll('div[_echarts_instance_]');
+charts.forEach(function(c){{echarts.init(c).resize();}});
+window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom(c).resize();}});}};
+<\/script></body></html>"""
+        print(f"[绘图] 代码执行成功，HTML长度: {len(chart_html)}")
+    except Exception as e:
+        print(f"[绘图] 代码执行失败: {e}")
+        import traceback
+        traceback.print_exc()
+        yield f"data: {json.dumps({'content': f'图表执行失败：{str(e)}'}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
-#         if "NOT_CHART" in intent:
-#             async for chunk in nochart_reply_stream(chart_message):
-#                 yield chunk
-#         else:
-#             async for chunk in chart_generate_stream(chart_message):
-#                 yield chunk
+    # 5. 返回图表
+    print("[绘图] 返回图表")
+    yield f"data: {json.dumps({'type': 'chart', 'chart_html': chart_html}, ensure_ascii=False)}\n\n"
+    yield "data: [DONE]\n\n"
 
-#     return StreamingResponse(generate(), media_type="text/event-stream")
+#图表接口
+class ChartRequest(BaseModel):
+    message: str
+    sessionId: str = ""
+
+@app.post("/api/chart/generate")
+async def chart_generate(request: ChartRequest):
+    chart_message = request.message
+
+    async def generate():
+        try:
+            intent = await chart_intent_chain.ainvoke({"question": chart_message})
+            intent = intent.strip().upper()
+
+            if "NOT_CHART" in intent:
+                async for chunk in nochart_reply_stream(chart_message):
+                    yield chunk
+            else:
+                async for chunk in chart_generate_stream(chart_message):
+                    yield chunk
+        except Exception as e:
+            print(f"在线绘图接口报错: {e}")
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
 # ============================================================
 # 十二、启动
 # ============================================================

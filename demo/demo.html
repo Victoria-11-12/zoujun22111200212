@@ -174,7 +174,7 @@
         <div class="chart-filter">
         </div>
     <div class="chart"></div>
-       
+
     </div>
         </div>
 
@@ -206,21 +206,21 @@
             <div class="chart-filter">
         </div>
                 <div class="chart"></div>
-                 
+
             </div>
             <div class="panel bar2" id="pos5">
             <h2 id="title-pos5">加载中...</h2>
             <div class="chart-filter">
         </div>
                 <div class="chart"></div>
-                 
+
             </div>
              <div class="panel words" id="pos6">
             <h2 id="title-pos6">加载中...</h2>
             <div class="chart-filter">
         </div>
                 <div class="chart"></div>
-                 
+
             </div>
         </div>
     </section>
@@ -262,6 +262,9 @@
         const chartInput = document.getElementById('chartInput');
         const chartCanvasContainer = document.getElementById('chartCanvasContainer');
 
+        // sessionId
+        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
         if (chartBtn) {
             chartBtn.onclick = function() {
                 const username = localStorage.getItem('username');
@@ -287,22 +290,103 @@
             });
         }
 
+        // 添加消息气泡（文字提示）
+        function addChartMessage(content, isUser) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chart-msg ' + (isUser ? 'chart-msg-user' : 'chart-msg-ai');
+            msgDiv.textContent = content;
+            chartCanvasContainer.appendChild(msgDiv);
+            chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
+            return msgDiv;
+        }
+
+        // 添加 iframe 图表
+        function addChartIframe(htmlContent) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'chart-iframe-wrapper';
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '450px';
+            iframe.style.border = 'none';
+            iframe.style.borderRadius = '8px';
+            iframe.setAttribute('srcdoc', htmlContent);
+            wrapper.appendChild(iframe);
+            chartCanvasContainer.appendChild(wrapper);
+            chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
+        }
+
         if (generateChartBtn) {
-            generateChartBtn.onclick = function() {
-                const input = chartInput.value.trim();
-                if (!input) {
+            generateChartBtn.onclick = async function() {
+                const message = chartInput.value.trim();
+                if (!message) {
                     alert('请输入图表描述或数据');
                     return;
                 }
 
-                // 显示生成中提示
-                chartCanvasContainer.innerHTML = '<div class="chart-generating">📊 图表生成中...</div>';
+                // 显示用户输入
+                addChartMessage(message, true);
+                chartInput.value = '';
+                generateChartBtn.disabled = true;
 
-                // 模拟图表生成（实际应用中应该调用后端 API）
-                setTimeout(() => {
-                    chartCanvasContainer.innerHTML = '<div class="canvas-placeholder"><p>图表已生成（待实现后端 API）</p><p>输入示例："绘制一个柱状图，展示 2020-2024 年的票房数据：[100, 150, 200, 250, 300]"</p></div>';
-                    alert('图表生成功能待实现，需要连接后端 API');
-                }, 1500);
+                // 创建 AI 回复气泡
+                const aiMsgDiv = addChartMessage('🤔 思考中...', false);
+
+                try {
+                    const response = await fetch('http://localhost:8000/api/chart/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message, sessionId: sessionId })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('网络响应失败');
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let fullContent = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
+
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') {
+                                    continue;
+                                } else {
+                                    try {
+                                        const parsed = JSON.parse(data);
+                                        if (parsed.type === 'chart' && parsed.chart_html) {
+                                            // 收到图表 HTML → 用 iframe 渲染
+                                            aiMsgDiv.textContent = '';
+                                            addChartIframe(parsed.chart_html);
+                                        } else if (parsed.content) {
+                                            // 收到文字内容 → 更新气泡
+                                            fullContent += parsed.content;
+                                            aiMsgDiv.textContent = fullContent;
+                                            chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
+                                        }
+                                    } catch (e) {
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    aiMsgDiv.textContent = '网络错误，请稍后重试。';
+                } finally {
+                    generateChartBtn.disabled = false;
+                }
             };
         }
 
