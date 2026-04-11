@@ -10,14 +10,11 @@
 <body>
     <header>
     <div class="left-group">
-        <!-- <div class="search-box">
-            <button id="searchBtn">🔍 电影搜索</button>
-        </div> -->
         <div class="header-buttons">
             <button id="searchBtn">🔍 电影搜索</button>
-            <button class="dict-btn">词典</button>
             <button class="msg-btn">留言框</button>
             <button class="AI-btn">AI助手</button>
+            <button class="chart-btn">在线绘图</button>
             <button class="logout-btn">登录/退出</button>
         </div>
     </div>
@@ -94,41 +91,67 @@
     </div>
     </div>
 
-    <!-- AI助手弹窗 -->
-    <div id="aiModal" class="ai-modal-overlay">
-    <div class="ai-modal-panel">
-        <!-- 四角装饰 -->
-        <span class="ai-corner tl"></span>
-        <span class="ai-corner tr"></span>
-        <span class="ai-corner bl"></span>
-        <span class="ai-corner br"></span>
-        <!-- 标题栏 -->
-        <div class="ai-modal-header">
-        <span class="ai-icon">🤖</span>
-        <h3>AI助手</h3>
-        <span id="closeAiModal" class="ai-close-btn">✕</span>
-        </div>
-        <!-- 分割线 -->
-        <div class="ai-divider">
-        <span class="ai-divider-dot"></span>
-        </div>
-        <!-- 内容区 -->
-        <div class="ai-body">
-        <!-- AI回复 -->
-        <div class="ai-chat-container" id="aiChatContainer">
-            <div class="ai-message ai-message-ai">
-            <div class="ai-message-content">你好！我是AI助手，有什么可以帮您的吗？</div>
+    <!-- AI 助手弹窗 -->
+    <div id="aiModal" class="modal-overlay" data-modal="ai">
+        <div class="modal-panel">
+            <!-- 四角装饰 -->
+            <span class="corner tl"></span><span class="corner tr"></span>
+            <span class="corner bl"></span><span class="corner br"></span>
+            <!-- 标题栏 -->
+            <div class="modal-header">
+                <span class="modal-icon">🤖</span>
+                <h3>AI 助手</h3>
+                <span class="modal-close-btn" data-close="aiModal">✕</span>
+            </div>
+            <!-- 分割线 -->
+            <div class="modal-divider"><span class="divider-dot"></span></div>
+            <!-- 内容区 -->
+            <div class="modal-body">
+                <!-- AI 回复区 -->
+                <div class="chat-container" id="aiChatContainer">
+                    <div class="message message-ai">
+                        <div class="message-content">你好！我是 AI 助手，有什么可以帮您的吗？</div>
+                    </div>
+                </div>
+                <!-- 输入区 -->
+                <div class="input-area">
+                    <textarea id="aiInput" class="modal-textarea" rows="3" placeholder="输入您的问题..."></textarea>
+                    <button id="sendAiMessage" class="modal-send-btn"><span class="btn-text">发 送</span></button>
+                </div>
             </div>
         </div>
-        <!-- 输入区 -->
-        <div class="ai-input-area">
-            <textarea id="aiInput" class="ai-textarea" rows="3" placeholder="输入您的问题..."></textarea>
-            <button id="sendAiMessage" class="ai-send-btn">
-            <span class="btn-text">发 送</span>
-            </button>
-        </div>
-        </div>
     </div>
+
+    <!-- 在线绘图弹窗 -->
+    <div id="chartModal" class="modal-overlay" data-modal="chart">
+        <div class="modal-panel modal-panel-lg">
+            <!-- 四角装饰 -->
+            <span class="corner tl"></span><span class="corner tr"></span>
+            <span class="corner bl"></span><span class="corner br"></span>
+            <!-- 标题栏 -->
+            <div class="modal-header">
+                <span class="modal-icon">📊</span>
+                <h3>在线绘图</h3>
+                <span class="modal-close-btn" data-close="chartModal">✕</span>
+            </div>
+            <!-- 分割线 -->
+            <div class="modal-divider"><span class="divider-dot"></span></div>
+            <!-- 内容区 -->
+            <div class="modal-body">
+                <!-- 绘图区 -->
+                <div class="canvas-container" id="chartCanvasContainer">
+                    <div class="canvas-placeholder">
+                        <p>请描述您要绘制的图表类型和数据</p>
+                        <p>例如："绘制一个柱状图，展示 2020-2024 年的票房数据：[100, 150, 200, 250, 300]"</p>
+                    </div>
+                </div>
+                <!-- 输入区 -->
+                <div class="input-area">
+                    <textarea id="chartInput" class="modal-textarea" rows="3" placeholder="输入图表描述或数据..."></textarea>
+                    <button id="generateChart" class="modal-send-btn"><span class="btn-text">生 成 图 表</span></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!--主体部分的盒子-->
@@ -223,23 +246,75 @@
         window.location.href = 'login.html';
     });
     </script>
-    <!-- 词典 -->
-    <script>
-    // 词典按钮跳转到有道翻译（新窗口打开）
-    document.querySelector('.dict-btn').addEventListener('click', function() {
-        const username = localStorage.getItem('username');
-        if (!username) {
-            alert('请先登录后再使用词典功能');
-            return;
-        }
-        window.open('https://fanyi.youdao.com/', '_blank');
-    });
-    </script>
     <!-- 留言脚本 -->
     <script src="js/massage.js"></script>
     <!-- marked.js for Markdown渲染 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- AI助手脚本 -->
+    <!-- AI 脚本 -->
     <script src="js/ai.js"></script>
+    <!-- 在线绘图脚本 -->
+    <script>
+    (function() {
+        const chartModal = document.getElementById('chartModal');
+        const chartBtn = document.querySelector('.chart-btn');
+        const closeChartModal = document.querySelector('[data-close="chartModal"]');
+        const generateChartBtn = document.getElementById('generateChart');
+        const chartInput = document.getElementById('chartInput');
+        const chartCanvasContainer = document.getElementById('chartCanvasContainer');
+
+        if (chartBtn) {
+            chartBtn.onclick = function() {
+                const username = localStorage.getItem('username');
+                if (!username) {
+                    alert('请先登录后再使用在线绘图功能');
+                    return;
+                }
+                chartModal.style.display = 'flex';
+            };
+        }
+
+        if (closeChartModal) {
+            closeChartModal.onclick = function() {
+                chartModal.style.display = 'none';
+            };
+        }
+
+        if (chartModal) {
+            chartModal.addEventListener('click', function(e) {
+                if (e.target === chartModal) {
+                    chartModal.style.display = 'none';
+                }
+            });
+        }
+
+        if (generateChartBtn) {
+            generateChartBtn.onclick = function() {
+                const input = chartInput.value.trim();
+                if (!input) {
+                    alert('请输入图表描述或数据');
+                    return;
+                }
+
+                // 显示生成中提示
+                chartCanvasContainer.innerHTML = '<div class="chart-generating">📊 图表生成中...</div>';
+
+                // 模拟图表生成（实际应用中应该调用后端 API）
+                setTimeout(() => {
+                    chartCanvasContainer.innerHTML = '<div class="canvas-placeholder"><p>图表已生成（待实现后端 API）</p><p>输入示例："绘制一个柱状图，展示 2020-2024 年的票房数据：[100, 150, 200, 250, 300]"</p></div>';
+                    alert('图表生成功能待实现，需要连接后端 API');
+                }, 1500);
+            };
+        }
+
+        if (chartInput) {
+            chartInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    generateChartBtn.click();
+                }
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
