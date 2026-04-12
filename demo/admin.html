@@ -185,26 +185,19 @@
 
 <!-- AI助手面板 -->
 <section class="panel" id="panel-ai">
-    <div class="ai-container">
-        <div class="ai-box">
-            <div class="ai-header">
-                <h3><i class="ai-icon">🤖</i> AI管理员助手</h3>
-                <p class="ai-subtitle">输入"管理员模式"进入管理模式，可进行用户增删改查操作</p>
-            </div>
-            <div class="ai-chat-container" id="adminAiChatContainer">
-                <div class="ai-message ai-message-system">
-                    <div class="ai-message-content">
-                        <p>👋 欢迎使用AI管理员助手！</p>
-                        <p>• 普通模式：查询电影数据、一般性问题</p>
-                        <p>• 管理员模式：输入"管理员模式"，验证口令后可执行用户管理操作</p>
-                    </div>
-                </div>
-            </div>
-            <div class="ai-input-area">
-                <textarea id="adminAiInput" class="ai-textarea" rows="3" placeholder="输入您的问题..."></textarea>
-                <button id="sendAdminAiMessage" class="ai-send-btn">发送</button>
+    <div class="ai-chat-container" id="adminAiChatContainer">
+        <div class="ai-message ai-message-system">
+            <div class="ai-message-content">
+                <p>👋 欢迎使用AI管理员助手！</p>
+                <p>• 查询电影数据、一般性问题</p>
+                <p>• 用户管理：新增、删除、查询、修改用户</p>
+                <p>例如："查询所有用户"、"新增用户 test1 密码 123456"</p>
             </div>
         </div>
+    </div>
+    <div class="ai-input-area">
+        <textarea id="adminAiInput" class="ai-textarea" rows="3" placeholder="输入您的问题..."></textarea>
+        <button id="sendAdminAiMessage" class="ai-send-btn">发送</button>
     </div>
 </section>
 
