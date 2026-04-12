@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>注册 - 电影票房数据分析系统</title>
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>用户注册</h2>
+        
+        <div class="input-group">
+            <label>设置用户名</label>
+            <input type="text" id="regUsername" placeholder="建议使用中英文或数字" autocomplete="off">
+        </div>
+        
+        <div class="input-group">
+            <label>设置密码</label>
+            <input type="password" id="regPassword" placeholder="请输入密码">
+        </div>
+
+        <div class="input-group">
+            <label>确认密码</label>
+            <input type="password" id="confirmPassword" placeholder="请再次输入密码">
+        </div>
+
+        <div class="btn-group">
+            <button id="regBtn" style="background: #19ba8b;">提交注册</button>
+            <a href="login.html" class="reg-link">已有账号？返回登录</a>
+        </div>
+    </div>
+
+<script>
+    document.getElementById('regBtn').onclick = function() {
+        const btn = this; // 获取按钮引用
+        const user = document.getElementById('regUsername').value.trim(); // 去除空格
+        const pass = document.getElementById('regPassword').value;
+        const confirmPass = document.getElementById('confirmPassword').value;
+
+        // 1. 严谨校验
+        if (!user || !pass) {
+            alert("用户名和密码不能为空");
+            return;
+        }
+        if (pass.length < 6) {
+            alert("密码长度不能少于6位");
+            return;
+        }
+        if (pass !== confirmPass) {
+            alert("两次输入的密码不一致");
+            return;
+        }
+
+        // 2. 禁用按钮，防止重复提交
+        btn.disabled = true;
+        btn.innerText = "注册中...";
+
+        console.log("正在提交注册信息:", { user });
+
+        // 3. 发送请求给后端
+        fetch('http://localhost:3000/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.code === 200) {
+                alert('注册成功！');
+                window.location.href = 'login.html'; 
+            } else {
+                alert('注册失败：' + data.msg);
+                // 失败了恢复按钮
+                btn.disabled = false;
+                btn.innerText = "提交注册";
+            }
+        })
+        .catch(err => {
+            console.error('网络错误:', err);
+            alert("服务器连接失败，请检查后端程序是否启动");
+            btn.disabled = false;
+            btn.innerText = "提交注册";
+        });
+    };
+</script>
+</body>
+</html>

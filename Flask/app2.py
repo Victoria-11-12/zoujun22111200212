@@ -1,28 +1,11 @@
-import os
-import json
-import bcrypt
 import joblib
 import pandas as pd
 import numpy as np
 import requests
 import time
-import asyncio
-# from dotenv import load_dotenv
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
-# from sklearn.preprocessing import LabelEncoder
-# from langchain_openai import ChatOpenAI
-# from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-# from langchain_core.messages import HumanMessage, AIMessage
-# from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-# from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableBranch, RunnableLambda
-# from langchain_community.utilities import SQLDatabase
-# from langchain_community.agent_toolkits import create_sql_agent, SQLDatabaseToolkit
-# from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
-# from langchain.tools import tool
-# import pymysql
 
-# load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
