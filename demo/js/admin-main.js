@@ -18,7 +18,13 @@ function switchPanel(targetId) {
     panels.forEach(p => p.classList.remove('active'));
     document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
     document.getElementById(targetId).classList.add('active');
-    currentTitle.innerText = document.querySelector(`[data-target="${targetId}"]`).innerText;
+    
+    // AI 助手模块不显示标题
+    if (targetId !== 'panel-ai') {
+        currentTitle.innerText = document.querySelector(`[data-target="${targetId}"]`).innerText;
+    } else {
+        currentTitle.innerText = '';
+    }
 
     if (targetId === 'panel-user') {
         loadUserList();

@@ -324,15 +324,17 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
     display: flex;
     flex-direction: column;
     padding: 0;
-    height: calc(100vh - 80px);
+    height: 100%;
     overflow: hidden;
+    background: transparent;
 }
 
 .ai-chat-container {
     flex: 1;
-    padding: 15px;
+    padding: 0 15px 15px 15px;
     overflow-y: auto;
-    background: #f5f5f5;
+    background: url(../img/luka.png.jpg) no-repeat center center;
+    background-size: cover;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -348,25 +350,28 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 
 .ai-message-user {
     align-self: flex-end;
-    background: #1890ff;
+    background: rgba(24, 144, 255, 0.6);
     color: white;
     border-bottom-right-radius: 4px;
+    backdrop-filter: blur(4px);
 }
 
 .ai-message-ai {
     align-self: flex-start;
-    background: white;
+    background: rgba(255, 255, 255, 0.6);
     color: #333;
     border-bottom-left-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    backdrop-filter: blur(4px);
 }
 
 .ai-message-system {
     align-self: flex-start;
-    background: #e6f7ff;
+    background: rgba(230, 247, 255, 0.6);
     color: #1890ff;
-    border: 1px solid #91d5ff;
+    border: 1px solid rgba(145, 213, 255, 0.4);
     border-bottom-left-radius: 4px;
+    backdrop-filter: blur(4px);
 }
 
 .ai-message-content p {
@@ -375,8 +380,8 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 
 .ai-input-area {
     padding: 12px 15px;
-    background: white;
-    border-top: 1px solid #e0e0e0;
+    background: transparent;
+    border-top: 1px solid rgba(224, 224, 224, 0.3);
     display: flex;
     gap: 10px;
 }
@@ -384,17 +389,19 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 .ai-textarea {
     flex: 1;
     padding: 10px 12px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid rgba(217, 217, 217, 0.4);
     border-radius: 6px;
     resize: none;
     font-size: 14px;
     font-family: inherit;
     outline: none;
     transition: border-color 0.3s;
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .ai-textarea:focus {
     border-color: #1890ff;
+    background: rgba(255, 255, 255, 0.8);
 }
 
 .ai-send-btn {
