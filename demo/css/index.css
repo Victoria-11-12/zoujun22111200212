@@ -739,7 +739,7 @@ h2 {
 .modal-body { 
   display: flex; 
   flex-direction: column; 
-  gap: 0.7rem; 
+  gap: 0.5rem; 
   flex: 1;
   overflow: hidden;
 }
@@ -815,8 +815,8 @@ h2 {
 .canvas-container {
   flex: 1;
   overflow-y: auto;
-  min-height: 300px;
-  max-height: 450px;
+  min-height: 280px;
+  max-height: 420px;
   padding: 0.5rem;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(76, 155, 253, 0.15);
@@ -1052,4 +1052,22 @@ h2 {
   color: rgba(76, 155, 253, 0.7);
   font-size: 0.75rem;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 图表新窗口打开链接 */
+.chart-link-row {
+    text-align: center;
+    padding: 6px 0 2px;
+}
+
+.chart-open-link {
+    color: rgba(76, 155, 253, 0.8);
+    font-size: 0.7rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.chart-open-link:hover {
+    color: #4c9bfd;
+    text-decoration: underline;
 }

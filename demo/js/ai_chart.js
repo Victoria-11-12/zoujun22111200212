@@ -47,17 +47,35 @@
             return msgDiv;
         }
 
-        // 添加 iframe 图表
+        // 添加 iframe 图表 + 新窗口打开链接
         function addChartIframe(htmlContent) {
             const wrapper = document.createElement('div');
             wrapper.className = 'chart-iframe-wrapper';
+            
             const iframe = document.createElement('iframe');
             iframe.style.width = '100%';
-            iframe.style.height = '450px';
+            iframe.style.height = '400px';
             iframe.style.border = 'none';
             iframe.style.borderRadius = '8px';
             iframe.setAttribute('srcdoc', htmlContent);
             wrapper.appendChild(iframe);
+            
+            // 新窗口打开链接
+            const linkRow = document.createElement('div');
+            linkRow.className = 'chart-link-row';
+            const openLink = document.createElement('a');
+            openLink.href = '#';
+            openLink.className = 'chart-open-link';
+            openLink.textContent = '🔗 新窗口打开完整图表';
+            openLink.onclick = function(e) {
+                e.preventDefault();
+                const win = window.open('', '_blank');
+                win.document.write(htmlContent);
+                win.document.close();
+            };
+            linkRow.appendChild(openLink);
+            wrapper.appendChild(linkRow);
+            
             chartCanvasContainer.appendChild(wrapper);
             chartCanvasContainer.scrollTop = chartCanvasContainer.scrollHeight;
         }
@@ -82,7 +100,7 @@
                     const response = await fetch('http://localhost:8000/api/chart/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: message, sessionId: sessionId })
+                        body: JSON.stringify({ message: message, sessionId: sessionId, username: localStorage.getItem('username') || '' })
                     });
 
                     if (!response.ok) {

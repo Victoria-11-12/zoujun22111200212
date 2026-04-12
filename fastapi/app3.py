@@ -73,7 +73,7 @@ def save_history(session_id: str, user_msg: str, ai_msg: str):
 
 #日志处理
 MODEL_NAME = os.getenv('MODEL_NAME', 'unknown')
-
+#用户对话日志记录
 def log_user_chat(session_id: str, role: str, content: str, intent: str = None, user_name: str = ""):
     try:
         conn = pymysql.connect(
@@ -91,7 +91,7 @@ def log_user_chat(session_id: str, role: str, content: str, intent: str = None, 
     finally:
         conn.close()
 
-
+#管理员对话日志记录
 def log_admin_chat(session_id: str, role: str, content: str, user_name: str = ""):
     try:
         conn = pymysql.connect(
@@ -106,6 +106,23 @@ def log_admin_chat(session_id: str, role: str, content: str, user_name: str = ""
             conn.commit()
     except Exception as e:
         print(f"管理员日志记录失败: {e}")
+    finally:
+        conn.close()
+#图表生成日志记录
+def log_chart_generation(session_id, user_name, question, sql_result, code, is_success, error_msg=""):
+    try:
+        conn = pymysql.connect(
+            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
+        )
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO chart_generation_logs (session_id, user_name, question, sql_result, generated_code, is_success, error_msg, model_name) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                (session_id, user_name, question, sql_result, code, is_success, error_msg, MODEL_NAME)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"图表生成日志记录失败: {e}")
     finally:
         conn.close()
 
@@ -471,7 +488,7 @@ async def nochart_reply_stream(chart_message):
 
 
 #绘图调用的图表生成函数
-async def chart_generate_stream(chart_message: str):
+async def chart_generate_stream(chart_message: str, session_id: str = "", user_name: str = ""):
     """在线绘图主流程"""
 
     # 1. SQL Agent 查数据
@@ -548,17 +565,22 @@ async def chart_generate_stream(chart_message: str):
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <script src="http://localhost:3000/js/echarts.js"><\/script>
-<style>html,body{{margin:0;padding:0;width:100%;height:100%;}}</style>
+<style>
+html,body{{margin:0;padding:0;width:100%;height:100%;}}
+div[_echarts_instance_]{{width:100%!important;height:100%!important;}}
+<\/style>
 </head><body>{chart_html}<script>
 var charts=document.querySelectorAll('div[_echarts_instance_]');
 charts.forEach(function(c){{echarts.init(c).resize();}});
 window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom(c).resize();}});}};
 <\/script></body></html>"""
+        log_chart_generation(session_id, user_name, chart_message, data, code, True)
         print(f"[绘图] 代码执行成功，HTML长度: {len(chart_html)}")
     except Exception as e:
         print(f"[绘图] 代码执行失败: {e}")
         import traceback
         traceback.print_exc()
+        log_chart_generation(session_id, user_name, chart_message, data, code, False, str(e))
         yield f"data: {json.dumps({'content': f'图表执行失败：{str(e)}'}, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
         return
@@ -572,10 +594,13 @@ window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom
 class ChartRequest(BaseModel):
     message: str
     sessionId: str = ""
+    username: str = ""
 
 @app.post("/api/chart/generate")
 async def chart_generate(request: ChartRequest):
     chart_message = request.message
+    session_id = request.sessionId
+    user_name = request.username
 
     async def generate():
         try:
@@ -586,7 +611,7 @@ async def chart_generate(request: ChartRequest):
                 async for chunk in nochart_reply_stream(chart_message):
                     yield chunk
             else:
-                async for chunk in chart_generate_stream(chart_message):
+                async for chunk in chart_generate_stream(chart_message, session_id=session_id, user_name=user_name):
                     yield chunk
         except Exception as e:
             print(f"在线绘图接口报错: {e}")
