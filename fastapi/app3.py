@@ -2,6 +2,8 @@ import os
 import json
 import bcrypt
 import re
+import docker
+
 from dotenv import load_dotenv
 from fastapi import FastAPI,Request
 from fastapi.responses import StreamingResponse
@@ -826,7 +828,9 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 3. 根据用户需求选择合适的图表类型（柱状图、折线图、饼图、散点图、雷达图等）
 4. 不要使用 set_global_options，不要在 InitOpts 中设置 font_family（pyecharts 2.x 不支持）
 5. 输出格式：用 ```python 和 ``` 包裹代码，不要输出任何其他文字
-6. 代码最后一行必须是：CHART_HTML = chart.render_embed()
+6. 代码最后三行必须是：
+   CHART_HTML = chart.render_embed()
+   print("CHART_HTML_START" + CHART_HTML + "CHART_HTML_END")
 图表规范：
 7. X轴和Y轴必须设置 name 属性显示数据含义，例如：
    xaxis_opts=opts.AxisOpts(name="电影名称"), yaxis_opts=opts.AxisOpts(name="票房（美元）")
@@ -934,16 +938,35 @@ async def chart_generate_stream(chart_message: str, session_id: str = "", user_n
         code = code.strip()
         print(f"[绘图] 无代码块标记，直接使用，长度: {len(code)}")
 
-    # 4. 执行代码
-    print("[绘图] 开始执行代码...")
+        # 4. 在 Docker 沙箱中执行代码
+    print("[绘图] 开始在 Docker 沙箱中执行代码...")
     try:
-        local_vars = {}
-        exec(code, {"__builtins__": __builtins__}, local_vars)
-        chart_html = local_vars.get('CHART_HTML', '')
-        if not chart_html:
-            raise ValueError("代码执行成功但未生成图表（CHART_HTML 为空）")
-        # render_embed() 只返回 <div> 片段，需要包成完整 HTML 页面
-        # 用本地 echarts.js（Node.js:3000 静态服务），避免 CDN 被代理拦截
+        client = docker.from_env()
+        container = client.containers.run(
+            "pyecharts-sandbox",
+            command=["python", "-c", code],
+            mem_limit="256m",
+            network_disabled=True,
+            read_only=True,
+            detach=True,
+            stdout=True,
+            stderr=True
+        )
+        result = container.wait()
+        stdout = container.logs(stdout=True).decode()
+        stderr = container.logs(stderr=True).decode()
+        container.remove()
+
+        if result['StatusCode'] != 0:
+            raise RuntimeError(f"Docker 执行失败: {stderr}")
+
+        # 从 stdout 中提取 CHART_HTML
+        match = re.search(r'CHART_HTML_START(.*?)CHART_HTML_END', stdout, re.DOTALL)
+        if not match:
+            raise ValueError("Docker 执行成功但未获取到图表数据")
+        chart_html = match.group(1)
+
+        # 包成完整 HTML 页面
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <script src="http://localhost:3000/js/echarts.js"><\/script>

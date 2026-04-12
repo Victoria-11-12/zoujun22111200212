@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM m.daocloud.io/docker.io/library/python:3.10-slim
 
 RUN pip install pyecharts pandas numpy --no-cache-dir
 
