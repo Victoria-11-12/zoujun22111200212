@@ -33,6 +33,7 @@
                 <button class="menu-item" data-target="panel-message">💬 用户留言</button>    
                 <button class="menu-item" data-target="panel-chart">📊 图表更替</button>           
                 <button class="menu-item" data-target="panel-predict">🔮 票房预测</button>
+                <button class="menu-item" data-target="panel-ai">🤖 AI助手</button>
             </nav>
             <button class="logout-btn" id="logoutBtn">退出系统</button>
         </aside>
@@ -182,6 +183,31 @@
     </div>
 </div>
 
+<!-- AI助手面板 -->
+<section class="panel" id="panel-ai">
+    <div class="ai-container">
+        <div class="ai-box">
+            <div class="ai-header">
+                <h3><i class="ai-icon">🤖</i> AI管理员助手</h3>
+                <p class="ai-subtitle">输入"管理员模式"进入管理模式，可进行用户增删改查操作</p>
+            </div>
+            <div class="ai-chat-container" id="adminAiChatContainer">
+                <div class="ai-message ai-message-system">
+                    <div class="ai-message-content">
+                        <p>👋 欢迎使用AI管理员助手！</p>
+                        <p>• 普通模式：查询电影数据、一般性问题</p>
+                        <p>• 管理员模式：输入"管理员模式"，验证口令后可执行用户管理操作</p>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-input-area">
+                <textarea id="adminAiInput" class="ai-textarea" rows="3" placeholder="输入您的问题..."></textarea>
+                <button id="sendAdminAiMessage" class="ai-send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- 用户留言面板 -->
 <section class="panel" id="panel-message">
     <div class="tool-bar">
@@ -216,6 +242,7 @@
     <script>
         window.movieData = []; 
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="js/admin-config.js"></script>
     <script src="js/admin-utils.js"></script>
     <script src="js/admin-user.js"></script>
@@ -223,6 +250,7 @@
     <script src="js/admin-message.js"></script>
     <script src="js/admin-predict.js"></script>
     <script src="js/admin-chart.js"></script>
+    <script src="js/admin-ai.js"></script>
     <script src="js/admin-main.js"></script>
 </body>
 </html>
