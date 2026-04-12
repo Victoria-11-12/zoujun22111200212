@@ -142,9 +142,9 @@ vite.config.ts.timestamp-*
 
 .trae
 
-test1/111.py
+Flask/111.py
 
-test1/test.ipynb
+Flask/test.ipynb
 
 # Office 临时文件
 ~$*

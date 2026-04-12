@@ -1,1 +1,8 @@
+# Jupyter Notebook 视为文本文件
 *.ipynb linguist-language=Text
+
+# 第三方/下载的 JS 库文件（不计入语言统计）
+Web_Node/js/echarts.js linguist-vendored=true
+Web_Node/js/echarts-wordcloud.min.js linguist-vendored=true
+Web_Node/js/flexible.js linguist-vendored=true
+Web_Node/js/world.js linguist-vendored=true
