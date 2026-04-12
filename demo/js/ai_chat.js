@@ -230,7 +230,7 @@
                 const response = await fetch('http://localhost:8000/api/ai/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '' })
+                    body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '', clientIp: '' })
                 });
 
                 if (!response.ok) {
