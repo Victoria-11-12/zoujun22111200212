@@ -198,5 +198,75 @@ def get_roi_comparison():
         traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
+
+@app.route('/api/flask/gross_comparison', methods=['GET'])
+def get_gross_comparison():
+    try:
+        if lgb_model is None:
+            return jsonify({"code": 500, "msg": "LightGBM模型未加载"})
+        
+        response = requests.get(f"{NODE_API_URL}/movies")
+        movies = response.json()
+        df = pd.DataFrame(movies)
+        
+        if df.empty:
+            return jsonify({"code": 200, "data": []})
+        
+        print(f"票房对比(LightGBM) - 原始数据量：{len(df)}")
+        
+        required_cols = ['budget', 'gross', 'genres']
+        for col in required_cols:
+            if col in df.columns:
+                if col == 'genres':
+                    df[col] = df[col].astype(str).apply(lambda x: x.split('|')[0] if '|' in x else x)
+                else:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        df = df.dropna(subset=['budget', 'gross', 'genres'])
+        df = df[(df['budget'] > 0) & (df['gross'] > 0)]
+        
+        print(f"票房对比(LightGBM) - 过滤后数据量：{len(df)}")
+        
+        if df.empty:
+            return jsonify({"code": 200, "data": []})
+        
+        if 'director_name' in df.columns:
+            director_counts = df['director_name'].value_counts()
+            df['New_Director'] = df['director_name'].apply(lambda x: 'Yes' if director_counts.get(x, 0) == 1 else 'No')
+        else:
+            df['New_Director'] = 'No'
+        
+        if 'actor_1_name' in df.columns:
+            actor_counts = df['actor_1_name'].value_counts()
+            df['New_Actor'] = df['actor_1_name'].apply(lambda x: 'Yes' if actor_counts.get(x, 0) == 1 else 'No')
+        else:
+            df['New_Actor'] = 'No'
+        
+        input_df = df[['genres', 'New_Director', 'New_Actor', 'budget']].copy()
+        
+        cat_cols = ['genres', 'New_Director', 'New_Actor']
+        for col in cat_cols:
+            input_df[col] = pd.factorize(input_df[col].astype(str))[0]
+        
+        predictions = lgb_model.predict(input_df)
+        
+        df['predicted_gross'] = predictions
+        
+        df = df[(df['gross'] > 0) & (df['predicted_gross'] > 0)]
+        
+        max_gross = df['gross'].max()
+        df = df[df['predicted_gross'] <= max_gross * 2]
+        
+        print(f"票房对比(LightGBM) - 最终数据量：{len(df)}")
+        
+        result = df[['movie_title', 'gross', 'predicted_gross']].to_dict('records')
+        
+        return jsonify({"code": 200, "data": result})
+    except Exception as e:
+        print(f"票房对比接口异常：{e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"code": 500, "msg": str(e)})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

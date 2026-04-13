@@ -87,8 +87,10 @@ async function loadROIComparison() {
                 if (maxVal > maxROI) maxROI = maxVal;
             });
             
-            console.log('最大ROI值:', maxROI);
+            console.log('最大 ROI 值:', maxROI);
             console.log('散点数据量:', scatterData.length);
+            
+            const axisMax = Math.ceil(maxROI * 1.1 / 10) * 10;
             
             const option = {
                 title: {
@@ -113,30 +115,32 @@ async function loadROIComparison() {
                     top: 40
                 },
                 grid: {
-                    left: '10%',
+                    left: '12%',
                     right: '10%',
                     bottom: '15%',
                     top: '20%',
                     containLabel: true
                 },
                 xAxis: {
-                    name: '真实ROI',
+                    name: '真实 ROI',
                     nameLocation: 'middle',
                     nameGap: 30,
                     type: 'value',
                     min: 0,
-                    max: maxROI * 1.1,
+                    max: axisMax,
+                    interval: axisMax / 5,
                     axisLabel: {
                         formatter: '{value}'
                     }
                 },
                 yAxis: {
-                    name: '预测ROI',
+                    name: '预测 ROI',
                     nameLocation: 'middle',
                     nameGap: 40,
                     type: 'value',
                     min: 0,
-                    max: maxROI * 1.1,
+                    max: axisMax,
+                    interval: axisMax / 5,
                     axisLabel: {
                         formatter: '{value}'
                     }
@@ -146,10 +150,10 @@ async function loadROIComparison() {
                         name: '数据点',
                         type: 'scatter',
                         data: scatterData,
-                        symbolSize: 8,
+                        symbolSize: 6,
                         itemStyle: {
                             color: '#1890ff',
-                            opacity: 0.7
+                            opacity: 0.6
                         },
                         emphasis: {
                             itemStyle: {
@@ -162,7 +166,7 @@ async function loadROIComparison() {
                     {
                         name: '完美预测线',
                         type: 'line',
-                        data: [[0, 0], [maxROI * 1.1, maxROI * 1.1]],
+                        data: [[0, 0], [axisMax, axisMax]],
                         lineStyle: {
                             color: '#ff4d4f',
                             width: 2,
