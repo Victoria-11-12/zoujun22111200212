@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>数据分析平台 - 电影票房分析</title>
+    <link rel="stylesheet" href="css/analyst.css">
+    <script src="js/echarts.js"></script>
+    <script>
+        // 登录检查 - 只允许 analyst 和 admin 角色访问
+        (function() {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            if (!token || (role !== 'analyst' && role !== 'admin')) {
+                alert('权限不足，请以分析师或管理员账号登录！');
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="analyst-container">
+        <!-- 顶部导航栏 -->
+        <header class="top-nav">
+            <div class="nav-brand">数据分析平台</div>
+            <div class="nav-actions">
+                <button class="logout-btn" id="logoutBtn">退出系统</button>
+            </div>
+        </header>
+
+        <!-- Tab 导航 -->
+        <nav class="tab-nav">
+            <button class="tab-item active" data-tab="overview">数据概览</button>
+            <button class="tab-item" data-tab="evaluation">质量评估</button>
+            <button class="tab-item" data-tab="finetune">微调数据</button>
+        </nav>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 数据概览 Tab -->
+            <section class="tab-panel active" id="overview-panel">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3 class="chart-title">对话量趋势</h3>
+                        <div class="chart-container" id="chatTrendChart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">意图分布</h3>
+                        <div class="chart-container" id="intentDistChart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">绘图成功率</h3>
+                        <div class="chart-container" id="chartSuccessChart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3 class="chart-title">攻击类型分布</h3>
+                        <div class="chart-container" id="attackDistChart"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 质量评估 Tab -->
+            <section class="tab-panel" id="evaluation-panel">
+                <div class="evaluation-layout">
+                    <!-- 左侧筛选区 -->
+                    <aside class="filter-sidebar">
+                        <div class="filter-section">
+                            <h4>时间范围</h4>
+                            <div class="date-range">
+                                <input type="date" id="evalStartDate" placeholder="开始日期">
+                                <span>~</span>
+                                <input type="date" id="evalEndDate" placeholder="结束日期">
+                            </div>
+                        </div>
+                        <div class="filter-section">
+                            <h4>数据来源</h4>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="user_chat_logs" checked>
+                                    <span>用户对话日志</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="admin_chat_logs" checked>
+                                    <span>管理员对话日志</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="chart_generation_logs" checked>
+                                    <span>图表生成日志</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="security_warning_logs" checked>
+                                    <span>安全警告日志</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="start-eval-btn" id="startEvalBtn">开始评估</button>
+                        <div class="progress-section" id="progressSection" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <div class="progress-text" id="progressText">0%</div>
+                        </div>
+                    </aside>
+
+                    <!-- 右侧展示区 -->
+                    <div class="result-display">
+                        <div class="charts-row">
+                            <div class="chart-card">
+                                <h3 class="chart-title">评分分布</h3>
+                                <div class="chart-container" id="scoreDistChart"></div>
+                            </div>
+                            <div class="chart-card">
+                                <h3 class="chart-title">各维度平均分</h3>
+                                <div class="chart-container" id="dimensionRadarChart"></div>
+                            </div>
+                        </div>
+                        <div class="low-score-section">
+                            <h4>低分案例（评分 ≤ 3）</h4>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>来源</th>
+                                        <th>评分</th>
+                                        <th>问题描述</th>
+                                        <th>用户内容</th>
+                                        <th>AI回复</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lowScoreTableBody">
+                                    <tr>
+                                        <td colspan="6" class="empty-tip">请先开始评估</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 微调数据 Tab -->
+            <section class="tab-panel" id="finetune-panel">
+                <div class="finetune-layout">
+                    <!-- 筛选区 -->
+                    <div class="filter-bar">
+                        <div class="filter-item">
+                            <label>最低评分</label>
+                            <select id="minScoreSelect">
+                                <option value="5">5分</option>
+                                <option value="4" selected>4分</option>
+                                <option value="3">3分</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>数据来源</label>
+                            <div class="checkbox-group inline">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="user_chat_logs" checked>
+                                    <span>用户对话</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="admin_chat_logs" checked>
+                                    <span>管理员对话</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="security_warning_logs" checked>
+                                    <span>安全警告</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="chart_generation_logs" checked>
+                                    <span>图表生成</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="filter-item">
+                            <label>时间范围</label>
+                            <div class="date-range">
+                                <input type="date" id="finetuneStartDate">
+                                <span>~</span>
+                                <input type="date" id="finetuneEndDate">
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button class="preview-btn" id="previewBtn">预览</button>
+                            <button class="export-btn" id="exportBtn">导出 JSONL</button>
+                        </div>
+                    </div>
+
+                    <!-- 预览区 -->
+                    <div class="preview-section">
+                        <h4>数据预览（前10条）</h4>
+                        <div class="jsonl-preview" id="jsonlPreview">
+                            <div class="empty-tip">点击"预览"按钮查看数据</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/analyst_main.js"></script>
+    <script src="js/analyst_overview.js"></script>
+    <script src="js/analyst_evaluation.js"></script>
+    <script src="js/analyst_finetune.js"></script>
+</body>
+</html>

@@ -19,9 +19,17 @@
             <input type="password" id="password" placeholder="请输入密码">
         </div>
 
-        <label class="admin-option">
-            <input type="checkbox" id="isAdmin"> 管理员登录
-        </label>
+        <div class="login-options">
+            <label class="login-option">
+                <input type="radio" name="loginType" value="user" checked> 普通用户登录
+            </label>
+            <label class="login-option">
+                <input type="radio" name="loginType" value="admin"> 管理员登录
+            </label>
+            <label class="login-option">
+                <input type="radio" name="loginType" value="analyst"> 分析师登录
+            </label>
+        </div>
 
         <div class="btn-group">
             <button id="loginBtn">进入系统</button>
@@ -34,7 +42,7 @@
         // 1. 获取输入值
         const user = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
-        const isAdminChecked = document.getElementById('isAdmin').checked; // 获取“管理员登录”勾选状态
+        const loginType = document.querySelector('input[name="loginType"]:checked').value;
 
         // 2. 基础校验
         if (!user || !pass) {
@@ -52,19 +60,33 @@
         .then(data => {
             if (data.code === 200) {
                 // --- 核心操作：保存身份凭证到本地 ---
-                // 这样跳转到新页面后，系统依然记得你是谁
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('username', user);
                 localStorage.setItem('role', data.role);
 
                 // --- 核心操作：权限分流跳转 ---
-                // 如果是管理员且勾选了管理员登录，去后台；否则去大屏
-                if (data.role === 'admin' && isAdminChecked) {
+                const userRole = data.role;
+
+                if (loginType === 'admin') {
+                    // 管理员登录权限检查
+                    if (userRole !== 'admin') {
+                        alert('权限不足：您没有管理员权限，无法进入后台管理系统！');
+                        return;
+                    }
                     alert('管理员身份确认，正在进入后台管理系统...');
-                    window.location.href = 'admin.html'; 
+                    window.location.href = 'admin.html';
+                } else if (loginType === 'analyst') {
+                    // 分析师登录权限检查
+                    if (userRole !== 'analyst' && userRole !== 'admin') {
+                        alert('权限不足：您没有分析师权限，无法进入数据分析平台！');
+                        return;
+                    }
+                    alert('分析师身份确认，正在进入数据分析平台...');
+                    window.location.href = 'analyst.html';
                 } else {
+                    // 普通用户登录
                     alert('登录成功，欢迎回来！');
-                    window.location.href = 'demo.html'; 
+                    window.location.href = 'demo.html';
                 }
             } else {
                 // 登录失败（如密码错误、用户不存在）

@@ -76,18 +76,33 @@ h2 {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* 管理员勾选框 */
-.admin-option {
+/* 登录选项组 */
+.login-options {
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-option {
     display: flex;
     align-items: center;
     font-size: 14px;
     cursor: pointer;
+    color: rgba(255,255,255,0.9);
+    transition: color 0.2s;
 }
 
-.admin-option input {
-    margin-right: 8px;
+.login-option:hover {
+    color: #00f6ff;
+}
+
+.login-option input[type="radio"] {
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
+    accent-color: #4c9bfd;
 }
 
 /* 按钮组 */

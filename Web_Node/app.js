@@ -254,6 +254,87 @@ app.delete('/api/admin/messages/:id', (req, res) => {
     });
 });
 
+// ------------------- 分析师：数据概览 -------------------
+app.get('/api/analyst/overview', (req, res) => {
+    const result = {
+        chat_trend: [],
+        intent_distribution: [],
+        chart_success_rate: { success: 0, fail: 0 },
+        attack_distribution: []
+    };
+
+    // 1. 对话量趋势（最近30天）
+    const chatTrendSql = `
+        SELECT DATE(created_at) as date, COUNT(*) as count 
+        FROM user_chat_logs 
+        GROUP BY DATE(created_at) 
+        ORDER BY date DESC 
+        LIMIT 30
+    `;
+
+    // 2. 意图分布（将NULL或空值归类为"缺失"）
+    const intentSql = `
+        SELECT 
+            CASE 
+                WHEN intent IS NULL OR intent = '' THEN '缺失'
+                ELSE intent 
+            END as intent, 
+            COUNT(*) as count 
+        FROM user_chat_logs 
+        GROUP BY 
+            CASE 
+                WHEN intent IS NULL OR intent = '' THEN '缺失'
+                ELSE intent 
+            END
+    `;
+
+    // 3. 绘图成功率
+    const chartSuccessSql = `
+        SELECT is_success, COUNT(*) as count 
+        FROM chart_generation_logs 
+        GROUP BY is_success
+    `;
+
+    // 4. 攻击类型分布
+    const attackSql = `
+        SELECT warning_type, COUNT(*) as count 
+        FROM security_warning_logs 
+        GROUP BY warning_type
+    `;
+
+    // 执行所有查询
+    db.query(chatTrendSql, (err, chatTrendResults) => {
+        if (!err) {
+            result.chat_trend = chatTrendResults.reverse(); // 按时间正序
+        }
+
+        db.query(intentSql, (err, intentResults) => {
+            if (!err) {
+                result.intent_distribution = intentResults;
+            }
+
+            db.query(chartSuccessSql, (err, chartResults) => {
+                if (!err) {
+                    chartResults.forEach(row => {
+                        if (row.is_success === 1 || row.is_success === true) {
+                            result.chart_success_rate.success = row.count;
+                        } else {
+                            result.chart_success_rate.fail = row.count;
+                        }
+                    });
+                }
+
+                db.query(attackSql, (err, attackResults) => {
+                    if (!err) {
+                        result.attack_distribution = attackResults;
+                    }
+                    res.send({ code: 200, data: result });
+                });
+            });
+        });
+    });
+});
+
 app.listen(3000, () => {
     console.log('--------------------------------------');
     console.log('后端启动成功');

@@ -3,6 +3,7 @@ import json
 import bcrypt
 import re
 import docker
+import threading
 
 from dotenv import load_dotenv
 from fastapi import FastAPI,Request
@@ -1032,9 +1033,533 @@ async def chart_generate(request: ChartRequest):
     )
 
 # ============================================================
-# 十二、启动
+# 十二、LLM 评估模块（分析师功能）
+# ============================================================
+
+# 评估结果结构化输出模型
+class EvalResult(BaseModel):
+    score: int = Field(description="综合评分（1-5分）")
+    dimensions: dict = Field(description="各维度评分详情")
+    issues: str = Field(description="存在的问题描述")
+    verdict: str = Field(description="评估结论：pass/review/fail")
+
+# 评估模块专用 LLM（使用独立的 API Key 和 Model）
+eval_llm = ChatOpenAI(
+    model=os.getenv('EVAL_MODEL_NAME', 'deepseek-reasoner'),
+    openai_api_key=os.getenv('EVAL_API_KEY', os.getenv('API_KEY')),
+    openai_api_base=os.getenv('API_BASE'),
+    temperature=0
+)
+
+# 使用结构化输出的评估链
+eval_chain = eval_llm.with_structured_output(EvalResult)
+
+# 分析师数据库连接（只读权限查询日志表，读写权限操作 eval_results 表）
+DB_USER_ANALYST = os.getenv('DB_USER_ANALYST', os.getenv('DB_USER'))
+DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST', os.getenv('DB_PASS'))
+DB_URI_ANALYST = f"mysql+pymysql://{DB_USER_ANALYST}:{DB_PASS_ANALYST}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+
+# 评估进度全局变量
+eval_progress = {"status": "idle", "total": 0, "completed": 0}
+eval_lock = threading.Lock()
+
+# 评估 Prompts（用于结构化输出）
+RESPONSE_EVAL_PROMPT = """你是一个 LLM 输出质量评估员。请对以下对话记录进行质量评估。
+
+用户输入：{user_content}
+AI 回复：{ai_response}
+
+请从以下维度打分（1-5分）：
+1. 相关性：AI 回复是否准确回答了用户的问题
+2. 完整性：回复是否包含充分的信息，有无遗漏
+3. 准确性：回复中的数据是否正确无误
+4. 格式：回复是否清晰易读，结构良好
+
+评分标准：
+- 5分：完全符合要求，无任何问题
+- 4分：基本符合，有小瑕疵但不影响使用
+- 3分：部分符合，有明显不足
+- 2分：严重不足，影响使用
+- 1分：完全不符合，答非所问或数据错误
+
+verdict 规则：
+- score >= 4：pass
+- score == 3：review
+- score <= 2：fail
+
+请输出结构化的评估结果。"""
+
+CODE_EVAL_PROMPT = """你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
+
+用户需求：{question}
+生成的代码：{code}
+执行结果：{exec_result}
+
+请从以下维度打分（1-5分）：
+1. 可运行性：代码是否能正确执行并生成图表
+2. 图表完整性：是否包含标题、坐标轴名称
+3. 工具箱：是否包含 ToolboxOpts（用户可下载图片）
+4. 单位标注：坐标轴是否有单位说明（如"票房（万美元）"）
+5. 类型匹配：图表类型是否符合用户需求（如趋势用折线图、对比用柱状图）
+
+评分标准：
+- 5分：完全符合要求
+- 4分：基本符合，有小瑕疵
+- 3分：部分符合，有明显不足
+- 2分：严重不足
+- 1分：完全不符合
+
+verdict 规则：
+- score >= 4：pass
+- score == 3：review
+- score <= 2：fail
+
+请输出结构化的评估结果。"""
+
+# 分析师数据库操作函数（使用 analyst 用户连接）
+def get_analyst_db_connection():
+    """获取分析师数据库连接（只读权限）"""
+    return pymysql.connect(
+        host=os.getenv('DB_HOST'),
+        user=DB_USER_ANALYST,
+        password=DB_PASS_ANALYST,
+        database=os.getenv('DB_NAME'),
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+def save_eval_result(source_table: str, source_id: int, eval_type: str, 
+                     score: int, dimensions: str, issues: str, verdict: str):
+    """保存评估结果到 eval_results 表"""
+    try:
+        conn = get_analyst_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """INSERT INTO eval_results 
+                    (source_table, source_id, eval_type, score, dimensions, issues, verdict) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (source_table, source_id, eval_type, score, dimensions, issues, verdict)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"保存评估结果失败: {e}")
+    finally:
+        conn.close()
+
+# 评估执行函数（后台线程）
+def evaluate_records_task(records: list, eval_type: str):
+    """后台线程执行评估任务"""
+    global eval_progress
+    with eval_lock:
+        eval_progress["status"] = "running"
+        eval_progress["total"] = len(records)
+        eval_progress["completed"] = 0
+    
+    for record in records:
+        try:
+            if eval_type == "response":
+                # 对话质量评估
+                user_content = record.get("content", "") if record.get("role") == "user" else ""
+                ai_content = record.get("content", "") if record.get("role") == "ai" else ""
+                prompt = RESPONSE_EVAL_PROMPT.format(
+                    user_content=user_content,
+                    ai_response=ai_content
+                )
+            elif eval_type == "code":
+                # 绘图代码评估
+                exec_result = json.dumps({
+                    "success": record.get("is_success", False),
+                    "error": record.get("error_msg", "")
+                }, ensure_ascii=False)
+                prompt = CODE_EVAL_PROMPT.format(
+                    question=record.get("question", ""),
+                    code=record.get("generated_code", ""),
+                    exec_result=exec_result
+                )
+            else:
+                continue
+            
+            # 调用 LLM 进行评估（使用结构化输出）
+            result = eval_chain.invoke(prompt)
+            
+            # 保存评估结果
+            save_eval_result(
+                source_table=record.get("source_table", ""),
+                source_id=record.get("id", 0),
+                eval_type=eval_type,
+                score=result.score,
+                dimensions=json.dumps(result.dimensions, ensure_ascii=False),
+                issues=result.issues,
+                verdict=result.verdict
+            )
+            
+        except Exception as e:
+            print(f"评估记录失败 (id={record.get('id')}): {e}")
+            # 失败时保存默认结果
+            save_eval_result(
+                source_table=record.get("source_table", ""),
+                source_id=record.get("id", 0),
+                eval_type=eval_type,
+                score=0,
+                dimensions="{}",
+                issues=f"评估失败: {str(e)}",
+                verdict="fail"
+            )
+        
+        with eval_lock:
+            eval_progress["completed"] += 1
+    
+    with eval_lock:
+        eval_progress["status"] = "done"
+
+# ============================================================
+# 十三、分析师 API 路由
+# ============================================================
+
+# 请求模型
+class EvaluateRequest(BaseModel):
+    tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs", "chart_generation_logs", "security_warning_logs"])
+    start_date: str = Field(default="")
+    end_date: str = Field(default="")
+
+class ExportRequest(BaseModel):
+    min_score: int = Field(default=4)
+    tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs"])
+    start_date: str = Field(default="")
+    end_date: str = Field(default="")
+
+# 1. 触发质量评估
+@app.post("/api/analyst/evaluate")
+async def start_evaluation(request: EvaluateRequest):
+    """启动质量评估任务"""
+    global eval_progress
+    
+    with eval_lock:
+        if eval_progress["status"] == "running":
+            return {"error": "已有评估任务正在运行"}
+    
+    try:
+        conn = get_analyst_db_connection()
+        all_records = []
+        
+        with conn.cursor() as cursor:
+            date_filter = ""
+            params = []
+            if request.start_date and request.end_date:
+                date_filter = " AND DATE(created_at) BETWEEN %s AND %s"
+                params = [request.start_date, request.end_date]
+            
+            for table in request.tables:
+                if table in ["user_chat_logs", "admin_chat_logs", "security_warning_logs"]:
+                    # 对话类表
+                    cursor.execute(f"""
+                        SELECT id, session_id, role, content, created_at, '{table}' as source_table
+                        FROM {table}
+                        WHERE 1=1 {date_filter}
+                        ORDER BY id
+                    """, params)
+                    records = cursor.fetchall()
+                    # 按 session 分组，组合成对话对
+                    sessions = {}
+                    for r in records:
+                        sid = r["session_id"]
+                        if sid not in sessions:
+                            sessions[sid] = []
+                        sessions[sid].append(r)
+                    
+                    for sid, session_records in sessions.items():
+                        for i, r in enumerate(session_records):
+                            if r["role"] == "ai" and i > 0:
+                                user_record = session_records[i-1]
+                                if user_record["role"] == "user":
+                                    all_records.append({
+                                        "id": r["id"],
+                                        "source_table": table,
+                                        "user_content": user_record["content"],
+                                        "ai_content": r["content"],
+                                        "eval_type": "response"
+                                    })
+                
+                elif table == "chart_generation_logs":
+                    # 绘图代码表
+                    cursor.execute(f"""
+                        SELECT id, question, sql_result, generated_code, is_success, error_msg, created_at, '{table}' as source_table
+                        FROM {table}
+                        WHERE 1=1 {date_filter}
+                        ORDER BY id
+                    """, params)
+                    records = cursor.fetchall()
+                    for r in records:
+                        all_records.append({
+                            "id": r["id"],
+                            "source_table": table,
+                            "question": r["question"],
+                            "sql_result": r["sql_result"],
+                            "generated_code": r["generated_code"],
+                            "is_success": r["is_success"],
+                            "error_msg": r["error_msg"],
+                            "eval_type": "code"
+                        })
+        
+        conn.close()
+        
+        if not all_records:
+            return {"error": "没有找到符合条件的记录"}
+        
+        # 启动后台线程执行评估
+        def run_evaluation():
+            for record in all_records:
+                eval_type = record.pop("eval_type")
+                try:
+                    if eval_type == "response":
+                        prompt = RESPONSE_EVAL_PROMPT.format(
+                            user_content=record.get("user_content", ""),
+                            ai_response=record.get("ai_content", "")
+                        )
+                    else:  # code
+                        exec_result = json.dumps({
+                            "success": record.get("is_success", False),
+                            "error": record.get("error_msg", "")
+                        }, ensure_ascii=False)
+                        prompt = CODE_EVAL_PROMPT.format(
+                            question=record.get("question", ""),
+                            code=record.get("generated_code", ""),
+                            exec_result=exec_result
+                        )
+                    
+                    result = eval_chain.invoke(prompt)
+                    save_eval_result(
+                        source_table=record.get("source_table", ""),
+                        source_id=record.get("id", 0),
+                        eval_type=eval_type,
+                        score=result.score,
+                        dimensions=json.dumps(result.dimensions, ensure_ascii=False),
+                        issues=result.issues,
+                        verdict=result.verdict
+                    )
+                    
+                except Exception as e:
+                    print(f"评估失败 (id={record.get('id')}): {e}")
+                    save_eval_result(
+                        source_table=record.get("source_table", ""),
+                        source_id=record.get("id", 0),
+                        eval_type=eval_type,
+                        score=0,
+                        dimensions="{}",
+                        issues=f"评估失败: {str(e)}",
+                        verdict="fail"
+                    )
+                
+                with eval_lock:
+                    eval_progress["completed"] += 1
+            
+            with eval_lock:
+                eval_progress["status"] = "done"
+        
+        with eval_lock:
+            eval_progress["status"] = "running"
+            eval_progress["total"] = len(all_records)
+            eval_progress["completed"] = 0
+        
+        thread = threading.Thread(target=run_evaluation)
+        thread.start()
+        
+        return {
+            "task_id": "eval_" + str(int(time.time())),
+            "total_records": len(all_records),
+            "status": "started"
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+# 2. 查询评估进度
+@app.get("/api/analyst/evaluate/status")
+async def get_evaluate_status():
+    """获取评估任务进度"""
+    with eval_lock:
+        progress = eval_progress.copy()
+    
+    if progress["total"] > 0:
+        progress["progress"] = round(progress["completed"] / progress["total"] * 100, 2)
+    else:
+        progress["progress"] = 0
+    
+    return progress
+
+# 3. 获取评估结果
+@app.get("/api/analyst/results")
+async def get_results(min_score: int = 0, source_table: str = ""):
+    """获取评估结果统计"""
+    try:
+        conn = get_analyst_db_connection()
+        with conn.cursor() as cursor:
+            where_clause = "WHERE score >= %s"
+            params = [min_score]
+            
+            if source_table:
+                where_clause += " AND source_table = %s"
+                params.append(source_table)
+            
+            # 评分分布
+            cursor.execute(f"""
+                SELECT score, COUNT(*) as count 
+                FROM eval_results 
+                {where_clause}
+                GROUP BY score
+                ORDER BY score
+            """, params)
+            score_distribution = cursor.fetchall()
+            
+            # 各维度平均分
+            cursor.execute(f"""
+                SELECT dimensions 
+                FROM eval_results 
+                {where_clause}
+            """, params)
+            all_dimensions = cursor.fetchall()
+            
+            dimension_avg = {}
+            dimension_counts = {}
+            for row in all_dimensions:
+                try:
+                    dims = json.loads(row["dimensions"])
+                    for dim_name, dim_score in dims.items():
+                        if dim_name not in dimension_avg:
+                            dimension_avg[dim_name] = 0
+                            dimension_counts[dim_name] = 0
+                        dimension_avg[dim_name] += dim_score
+                        dimension_counts[dim_name] += 1
+                except:
+                    pass
+            
+            for dim_name in dimension_avg:
+                if dimension_counts[dim_name] > 0:
+                    dimension_avg[dim_name] = round(dimension_avg[dim_name] / dimension_counts[dim_name], 2)
+            
+            # 低分案例（score <= 3）
+            cursor.execute(f"""
+                SELECT er.*, 
+                       ucl.content as user_content,
+                       ucl2.content as ai_content
+                FROM eval_results er
+                LEFT JOIN user_chat_logs ucl ON er.source_table = 'user_chat_logs' AND er.source_id = ucl.id
+                LEFT JOIN user_chat_logs ucl2 ON er.source_table = 'user_chat_logs' AND er.source_id = ucl2.id AND ucl2.role = 'ai'
+                {where_clause} AND er.score <= 3
+                ORDER BY er.score ASC, er.created_at DESC
+                LIMIT 50
+            """, params)
+            low_score_cases = cursor.fetchall()
+            
+        return {
+            "score_distribution": [{"score": row["score"], "count": row["count"]} for row in score_distribution],
+            "dimension_avg": dimension_avg,
+            "low_score_cases": [
+                {
+                    "id": row["id"],
+                    "source_table": row["source_table"],
+                    "score": row["score"],
+                    "issues": row["issues"],
+                    "user_content": row.get("user_content", ""),
+                    "ai_content": row.get("ai_content", "")
+                }
+                for row in low_score_cases
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+# 4. 导出 JSONL
+@app.post("/api/analyst/export")
+async def export_jsonl(request: ExportRequest):
+    """导出高质量数据为 JSONL 格式"""
+    try:
+        conn = get_analyst_db_connection()
+        
+        date_filter = ""
+        params = [request.min_score]
+        if request.start_date and request.end_date:
+            date_filter = " AND DATE(er.created_at) BETWEEN %s AND %s"
+            params.extend([request.start_date, request.end_date])
+        
+        table_filter = ""
+        if request.tables:
+            placeholders = ",".join(["%s"] * len(request.tables))
+            table_filter = f" AND er.source_table IN ({placeholders})"
+            params.extend(request.tables)
+        
+        with conn.cursor() as cursor:
+            cursor.execute(f"""
+                SELECT er.* 
+                FROM eval_results er
+                WHERE er.score >= %s {date_filter} {table_filter}
+                ORDER BY er.created_at DESC
+            """, params)
+            results = cursor.fetchall()
+            
+            jsonl_lines = []
+            for row in results:
+                # 根据 source_table 回查原始对话
+                source_table = row["source_table"]
+                source_id = row["source_id"]
+                
+                messages = []
+                
+                if source_table in ["user_chat_logs", "admin_chat_logs", "security_warning_logs"]:
+                    cursor.execute(f"""
+                        SELECT role, content 
+                        FROM {source_table}
+                        WHERE id = %s OR (session_id = (SELECT session_id FROM {source_table} WHERE id = %s) AND ABS(id - %s) <= 1)
+                        ORDER BY id
+                    """, [source_id, source_id, source_id])
+                    chat_records = cursor.fetchall()
+                    
+                    for r in chat_records:
+                        role = "assistant" if r["role"] == "ai" else r["role"]
+                        messages.append({"role": role, "content": r["content"]})
+                
+                elif source_table == "chart_generation_logs":
+                    cursor.execute("""
+                        SELECT question, generated_code
+                        FROM chart_generation_logs
+                        WHERE id = %s
+                    """, [source_id])
+                    chart_record = cursor.fetchone()
+                    if chart_record:
+                        messages.append({"role": "user", "content": chart_record["question"]})
+                        messages.append({"role": "assistant", "content": chart_record["generated_code"]})
+                
+                if messages:
+                    jsonl_lines.append(json.dumps({"messages": messages}, ensure_ascii=False))
+        
+        conn.close()
+        
+        # 生成文件内容
+        content = "\n".join(jsonl_lines)
+        
+        # 返回文件流
+        from fastapi.responses import StreamingResponse
+        from io import BytesIO
+        
+        buffer = BytesIO(content.encode('utf-8'))
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/jsonl",
+            headers={
+                "Content-Disposition": f"attachment; filename=eval_export_{int(time.time())}.jsonl"
+            }
+        )
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+# ============================================================
+# 十四、启动
 # ============================================================
 
 if __name__ == "__main__":
     import uvicorn
+    import time
     uvicorn.run(app, host="0.0.0.0", port=8000)
