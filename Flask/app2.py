@@ -15,11 +15,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # ============================================================
 
 try:
-    lgb_model = joblib.load('lightgbm_model_1.pkl')
     rf_model = joblib.load('random_forest_model.pkl')
-    print("模型加载成功！")
+    print("随机森林模型加载成功！")
 except Exception as e:
-    print(f"模型加载失败，请检查文件路径: {e}")
+    print(f"随机森林模型加载失败: {e}")
+    rf_model = None
+
+try:
+    lgb_model = joblib.load('lightgbm_model_1.pkl')
+    print("LightGBM模型加载成功！")
+except Exception as e:
+    print(f"LightGBM模型加载失败: {e}")
+    lgb_model = None
 
 NODE_API_URL = "http://127.0.0.1:3000/api"
 
@@ -33,27 +40,17 @@ dark_horses_cache = {
 
 def prepare_features(df):
     df = df.copy()
-    if 'genres' not in df.columns:
-        df['genres'] = 'unknown'
-    else:
-        df['genres'] = df['genres'].fillna('unknown')
-    if 'director_facebook_likes' in df.columns:
-        df['New_Director'] = df['director_facebook_likes'].apply(
-            lambda x: 'No' if pd.isna(x) or float(x) == 0 else 'Yes'
-        )
-    else:
-        df['New_Director'] = 'No'
-    if 'actor_1_facebook_likes' in df.columns:
-        df['New_Actor'] = df['actor_1_facebook_likes'].apply(
-            lambda x: 'No' if pd.isna(x) or float(x) == 0 else 'Yes'
-        )
-    else:
-        df['New_Actor'] = 'No'
-    if 'budget' in df.columns:
-        df['budget'] = pd.to_numeric(df['budget'], errors='coerce').fillna(1000)
-    else:
-        df['budget'] = 1000
-    return df[['genres', 'New_Director', 'New_Actor', 'budget']]
+    feature_columns = [
+        'budget', 'director_facebook_likes', 'actor_1_facebook_likes',
+        'actor_2_facebook_likes', 'actor_2_facebook_likes', 'movie_facebook_likes',
+        'num_voted_users', 'num_user_for_reviews', 'imdb_score'
+    ]
+    for col in feature_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        else:
+            df[col] = 0
+    return df[feature_columns]
 
 
 @app.route('/api/flask/dark_horses', methods=['GET'])
@@ -71,28 +68,26 @@ def get_dark_horses():
         if df.empty:
             return jsonify({"code": 200, "data": []})
 
-        if 'budget' in df.columns:
-            df['budget'] = pd.to_numeric(df['budget'], errors='coerce')
-            df = df.dropna(subset=['budget'])
-            df = df[df['budget'] > 0]
-        else:
-            return jsonify({"code": 200, "data": []})
+        required_features = [
+            'budget', 'director_facebook_likes', 'actor_1_facebook_likes',
+            'actor_2_facebook_likes', 'movie_facebook_likes',
+            'num_voted_users', 'num_user_for_reviews', 'imdb_score'
+        ]
+        
+        for col in required_features:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        df = df.dropna(subset=required_features)
+        df = df[df['budget'] > 0]
 
         if df.empty:
             return jsonify({"code": 200, "data": []})
 
         df_features = prepare_features(df.copy())
 
-        cat_cols = ['genres', 'New_Director', 'New_Actor']
-        for col in cat_cols:
-            if col in df_features.columns:
-                if col in ['New_Director', 'New_Actor']:
-                    df_features[col] = df_features[col].apply(lambda x: 1 if str(x).strip().lower() == 'yes' else 0)
-                else:
-                    df_features[col] = df_features[col].apply(lambda x: hash(str(x)) % 2)
-
-        X = df_features[['genres', 'New_Director', 'New_Actor', 'budget']]
-        predictions = lgb_model.predict(X)
+        predictions_log = rf_model.predict(df_features)
+        predictions = np.expm1(predictions_log)
 
         df['predicted_gross'] = predictions
         df['predicted_roi'] = df['predicted_gross'] / df['budget']
@@ -114,31 +109,40 @@ def get_dark_horses():
 @app.route('/api/flask/predict_deep', methods=['POST'])
 def predict_deep():
     try:
+        if lgb_model is None:
+            return jsonify({"code": 500, "msg": "LightGBM模型未加载"})
+        
         data = request.json
         print("接收到的数据:", data)
-
-        features = [
-            float(data.get('budget', 0)),
-            float(data.get('director_likes', 0)),
-            float(data.get('actor1_likes', 0)),
-            float(data.get('actor2_likes', 0)),
-            float(data.get('actor3_likes', 0)),
-            float(data.get('movie_likes', 0)),
-            float(data.get('voted_users', 0)),
-            float(data.get('review_count', 0)),
-            float(data.get('imdb_score', 0))
-        ]
-        print("构造的特征列表:", features)
-
-        input_data = np.array([features])
-        predicted_log = rf_model.predict(input_data)[0]
-        predicted = np.expm1(predicted_log)
-        print("模型预测的对数值:", predicted_log)
-        print("转换后的票房预测:", predicted)
-
+        
+        budget = float(data.get('budget', 0))
+        genres = data.get('genres', '')
+        new_director = data.get('New_Director', 'No')
+        new_actor = data.get('New_Actor', 'No')
+        
+        input_df = pd.DataFrame({
+            'genres': [genres],
+            'New_Director': [new_director],
+            'New_Actor': [new_actor],
+            'budget': [budget]
+        })
+        
+        print("构造的DataFrame:", input_df)
+        
+        cat_cols = ['genres', 'New_Director', 'New_Actor']
+        for col in cat_cols:
+            input_df[col] = pd.factorize(input_df[col])[0]
+        
+        print("编码后的DataFrame:", input_df)
+        
+        predicted = lgb_model.predict(input_df)[0]
+        print("预测票房:", predicted)
+        
         return jsonify({"code": 200, "predicted_gross": float(predicted)})
     except Exception as e:
         print("预测接口异常:", str(e))
+        import traceback
+        traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
 if __name__ == '__main__':

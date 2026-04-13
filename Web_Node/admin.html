@@ -105,7 +105,7 @@
     <div class="predict-container">
         <div class="predict-box dark-horse-box">
             <div class="box-header">
-                <h3><i class="icon-medal"></i> 历史黑马票房榜 (LightGBM 识别)</h3>
+                <h3><i class="icon-medal"></i> 历史黑马票房榜 (随机森林)</h3>
                 <p class="subtitle">基于模型识别出的低预算、高回报影片</p>
             </div>
             <div class="box-content">
@@ -129,47 +129,58 @@
 
         <div class="predict-box deep-prediction-box">
             <div class="box-header">
-                <h3><i class="icon-target"></i> 深度票房预测 (Random Forest)</h3>
-                <p class="subtitle">请输入 9 项核心指标进行模拟计算</p>
+                <h3><i class="icon-target"></i> 深度票房预测 (LightGBM)</h3>
+                <p class="subtitle">请输入 4 项核心指标进行模拟计算</p>
             </div>
             <div class="box-content">
                 <form id="predictionForm" class="prediction-form">
-                        <div class="input-grid">
+                    <div class="input-grid">
                         <div class="input-item">
                             <label>制作预算 (美元)</label>
                             <input type="number" name="budget" value="0" required>
                         </div>
                         <div class="input-item">
-                            <label>导演知名度 (FB点赞)</label>
-                            <input type="number" name="director_likes" value="0" placeholder="0">
+                            <label>电影类型</label>
+                            <select name="genres" class="predict-select" required>
+                                <option value="">请选择电影类型</option>
+                                <option value="Action">Action (动作)</option>
+                                <option value="Adventure">Adventure (冒险)</option>
+                                <option value="Animation">Animation (动画)</option>
+                                <option value="Biography">Biography (传记)</option>
+                                <option value="Comedy">Comedy (喜剧)</option>
+                                <option value="Crime">Crime (犯罪)</option>
+                                <option value="Documentary">Documentary (纪录片)</option>
+                                <option value="Drama">Drama (剧情)</option>
+                                <option value="Family">Family (家庭)</option>
+                                <option value="Fantasy">Fantasy (奇幻)</option>
+                                <option value="History">History (历史)</option>
+                                <option value="Horror">Horror (恐怖)</option>
+                                <option value="Music">Music (音乐)</option>
+                                <option value="Musical">Musical (歌舞)</option>
+                                <option value="Mystery">Mystery (悬疑)</option>
+                                <option value="Romance">Romance (爱情)</option>
+                                <option value="Sci-Fi">Sci-Fi (科幻)</option>
+                                <option value="Sport">Sport (运动)</option>
+                                <option value="Thriller">Thriller (惊悚)</option>
+                                <option value="War">War (战争)</option>
+                                <option value="Western">Western (西部)</option>
+                            </select>
                         </div>
                         <div class="input-item">
-                            <label>主演1知名度 (FB点赞)</label>
-                            <input type="number" name="actor1_likes" value="0" placeholder="0">
+                            <label>是否新导演</label>
+                            <select name="New_Director" class="predict-select" required>
+                                <option value="">请选择</option>
+                                <option value="Yes">Yes (是)</option>
+                                <option value="No">No (否)</option>
+                            </select>
                         </div>
                         <div class="input-item">
-                            <label>主演2知名度 (FB点赞)</label>
-                            <input type="number" name="actor2_likes" value="0" placeholder="0">
-                        </div>
-                        <div class="input-item">
-                            <label>主演3知名度 (FB点赞)</label>
-                            <input type="number" name="actor3_likes" value="0" placeholder="0">
-                        </div>
-                        <div class="input-item">
-                            <label>电影社交热度 (FB点赞)</label>
-                            <input type="number" name="movie_likes" value="0" placeholder="0">
-                        </div>
-                        <div class="input-item">
-                            <label>用户投票数 (IMDb)</label>
-                            <input type="number" name="voted_users" value="0" placeholder="0">
-                        </div>
-                        <div class="input-item">
-                            <label>评论数量</label>
-                            <input type="number" name="review_count" value="0" placeholder="0">
-                        </div>
-                        <div class="input-item">
-                            <label>预期评分 (IMDb)</label>
-                            <input type="number" step="0.1" name="imdb_score" value="0" placeholder="0">
+                            <label>是否新演员</label>
+                            <select name="New_Actor" class="predict-select" required>
+                                <option value="">请选择</option>
+                                <option value="Yes">Yes (是)</option>
+                                <option value="No">No (否)</option>
+                            </select>
                         </div>
                     </div>
                     <button type="submit" class="predict-btn">开始深度计算</button>

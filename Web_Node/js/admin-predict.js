@@ -32,7 +32,14 @@ async function handleDeepPrediction(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+    const rawData = Object.fromEntries(formData.entries());
+    
+    const data = {
+        budget: parseFloat(rawData.budget) || 0,
+        genres: rawData.genres || '',
+        New_Director: rawData.New_Director || '',
+        New_Actor: rawData.New_Actor || ''
+    };
     
     const resultValue = document.querySelector('.result-value');
     resultValue.innerText = '计算中...';
