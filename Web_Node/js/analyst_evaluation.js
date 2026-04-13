@@ -13,6 +13,13 @@
     // 图表实例
     let scoreDistChart = null;
     let dimensionRadarChart = null;
+    
+    // 保存当前评估的筛选条件
+    let currentEvalParams = {
+        tables: [],
+        startDate: '',
+        endDate: ''
+    };
 
     // 初始化
     function init() {
@@ -29,15 +36,24 @@
 
     // 初始化图表
     function initCharts() {
-        const scoreDistEl = document.getElementById('scoreDistChart');
-        const dimensionRadarEl = document.getElementById('dimensionRadarChart');
+    }
 
-        if (scoreDistEl && typeof echarts !== 'undefined') {
+    // 初始化评分分布图表
+    function initScoreDistChart() {
+        const scoreDistEl = document.getElementById('scoreDistChart');
+        if (scoreDistEl && typeof echarts !== 'undefined' && !scoreDistChart) {
             scoreDistChart = echarts.init(scoreDistEl);
         }
-        if (dimensionRadarEl && typeof echarts !== 'undefined') {
+        return scoreDistChart;
+    }
+
+    // 初始化维度雷达图图表
+    function initDimensionRadarChart() {
+        const dimensionRadarEl = document.getElementById('dimensionRadarChart');
+        if (dimensionRadarEl && typeof echarts !== 'undefined' && !dimensionRadarChart) {
             dimensionRadarChart = echarts.init(dimensionRadarEl);
         }
+        return dimensionRadarChart;
     }
 
     // 获取选中的数据来源
@@ -62,6 +78,9 @@
             alert('请至少选择一个数据来源');
             return;
         }
+
+        // 保存当前筛选条件，用于获取结果时过滤
+        currentEvalParams = { tables, startDate, endDate };
 
         try {
             startEvalBtn.disabled = true;
@@ -147,7 +166,21 @@
     // 加载评估结果
     async function loadEvaluationResults() {
         try {
-            const response = await fetch(`${API_BASE}/api/analyst/results?min_score=0`, {
+            // 构建筛选参数
+            const params = new URLSearchParams({ min_score: '0' });
+            
+            // 添加数据来源筛选
+            if (currentEvalParams.tables && currentEvalParams.tables.length > 0) {
+                params.append('tables', currentEvalParams.tables.join(','));
+            }
+            
+            // 添加日期范围筛选（与上方前端日期筛选条件保持一致）
+            if (currentEvalParams.startDate && currentEvalParams.endDate) {
+                params.append('start_date', currentEvalParams.startDate);
+                params.append('end_date', currentEvalParams.endDate);
+            }
+            
+            const response = await fetch(`${API_BASE}/api/analyst/results?${params.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                 }
@@ -159,14 +192,20 @@
                 return;
             }
 
-            // 更新评分分布图表
-            updateScoreDistChart(data.score_distribution);
+            // 确保图表容器已渲染后再初始化
+            setTimeout(() => {
+                initScoreDistChart();
+                initDimensionRadarChart();
 
-            // 更新维度雷达图
-            updateDimensionRadarChart(data.dimension_avg);
+                // 更新评分分布图表
+                updateScoreDistChart(data.score_distribution);
 
-            // 更新低分案例表格
-            updateLowScoreTable(data.low_score_cases);
+                // 更新维度雷达图
+                updateDimensionRadarChart(data.dimension_avg);
+
+                // 更新低分案例表格
+                updateLowScoreTable(data.low_score_cases);
+            }, 100);
 
         } catch (error) {
             console.error('加载评估结果失败:', error);
@@ -217,6 +256,18 @@
     // 更新维度雷达图
     function updateDimensionRadarChart(dimensionAvg) {
         if (!dimensionRadarChart) return;
+
+        if (!dimensionAvg || typeof dimensionAvg !== 'object') {
+            dimensionRadarChart.setOption({
+                title: {
+                    text: '暂无数据',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: { color: '#94a3b8' }
+                }
+            });
+            return;
+        }
 
         const dimensions = Object.keys(dimensionAvg);
         const values = Object.values(dimensionAvg);

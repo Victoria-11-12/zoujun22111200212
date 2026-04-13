@@ -16,6 +16,20 @@ function initOverview() {
 
 // 初始化图表实例
 function initCharts() {
+    // 如果图表已存在，先销毁
+    if (chatTrendChart) {
+        chatTrendChart.dispose();
+    }
+    if (intentDistChart) {
+        intentDistChart.dispose();
+    }
+    if (chartSuccessChart) {
+        chartSuccessChart.dispose();
+    }
+    if (attackDistChart) {
+        attackDistChart.dispose();
+    }
+    
     chatTrendChart = echarts.init(document.getElementById('chatTrendChart'));
     intentDistChart = echarts.init(document.getElementById('intentDistChart'));
     chartSuccessChart = echarts.init(document.getElementById('chartSuccessChart'));

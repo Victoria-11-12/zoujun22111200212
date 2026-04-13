@@ -4,6 +4,7 @@ import bcrypt
 import re
 import docker
 import threading
+import asyncio
 
 from dotenv import load_dotenv
 from fastapi import FastAPI,Request
@@ -1038,24 +1039,19 @@ async def chart_generate(request: ChartRequest):
 # 十二、LLM 评估模块（分析师功能）
 # ============================================================
 
-# 评估结果结构化模型
-class DimensionScores(BaseModel):
-    relevance: Optional[int] = Field(None, description="相关性 1-5")
-    completeness: Optional[int] = Field(None, description="完整性 1-5")
-    accuracy: Optional[int] = Field(None, description="准确性 1-5")
-    format: Optional[int] = Field(None, description="格式 1-5")
-    runnable: Optional[int] = Field(None, description="可运行性 1-5")
-    chart_completeness: Optional[int] = Field(None, description="图表完整性 1-5")
-    toolbox: Optional[int] = Field(None, description="工具箱 1-5")
-    unit_label: Optional[int] = Field(None, description="单位标注 1-5")
-    chart_type_match: Optional[int] = Field(None, description="类型匹配 1-5")
+# 对话评估结果模型
+class ResponseEvalResult(BaseModel):
+    score: int = Field(description="总分1-5")
+    dimensions: dict = Field(description='{"相关性":5,"完整性":4,"准确性":3,"格式":5}')
+    issues: str = Field(description="问题描述")
+    verdict: str = Field(description="pass/review/fail")
 
-
-class EvalResult(BaseModel):
-    score: int = Field(description="总分 1-5")
-    dimensions: DimensionScores = Field(description="各维度得分")
-    issues: str = Field(description="问题描述，如果没有问题则填'无'")
-    verdict: str = Field(description="判定结果: pass/review/fail")
+# 绘图评估结果模型
+class CodeEvalResult(BaseModel):
+    score: int = Field(description="总分1-5")
+    dimensions: dict = Field(description='{"可运行性":5,"图表完整性":4,"工具箱":3,"单位标注":5,"类型匹配":4}')
+    issues: str = Field(description="问题描述")
+    verdict: str = Field(description="pass/review/fail")
 
 
 # 评估模块专用 LLM（使用 DeepSeek）
@@ -1077,7 +1073,7 @@ eval_progress = {"status": "idle", "total": 0, "completed": 0}
 eval_lock = threading.Lock()
 
 # 评估 Prompts（用于结构化输出）
-RESPONSE_EVAL_PROMPT = """你是一个 LLM 输出质量评估员。请对以下对话记录进行质量评估。
+response_eval_prompt= ChatPromptTemplate.from_template("""你是一个 LLM 输出质量评估员。请对以下对话记录进行质量评估。
 
 用户输入：{user_content}
 AI 回复：{ai_response}
@@ -1101,19 +1097,19 @@ verdict 规则：
 - score <= 2：fail
 
 请只输出 JSON，不要其他内容，格式如下：
-{
+{{
     "score": <整数1-5>,
-    "dimensions": {
+    "dimensions": {{
         "relevance": <整数1-5>,
         "completeness": <整数1-5>,
         "accuracy": <整数1-5>,
         "format": <整数1-5>
-    },
+    }},
     "issues": "<问题描述>",
     "verdict": "<pass/review/fail>"
-}"""
+}}""")
 
-CODE_EVAL_PROMPT = """你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
+code_eval_prompt = ChatPromptTemplate.from_template("""你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
 
 用户需求：{question}
 生成的代码：{code}
@@ -1139,30 +1135,27 @@ verdict 规则：
 - score <= 2：fail
 
 请只输出 JSON，不要其他内容，格式如下：
-{
+{{
     "score": <整数1-5>,
-    "dimensions": {
+    "dimensions": {{
         "runnable": <整数1-5>,
         "chart_completeness": <整数1-5>,
         "toolbox": <整数1-5>,
         "unit_label": <整数1-5>,
         "chart_type_match": <整数1-5>
-    },
+    }},
     "issues": "<问题描述>",
     "verdict": "<pass/review/fail>"
-}"""
+}}""")
 
-# 使用链式调用：Prompt -> LLM -> 结构化输出
-response_eval_prompt = ChatPromptTemplate.from_template(RESPONSE_EVAL_PROMPT)
-code_eval_prompt = ChatPromptTemplate.from_template(CODE_EVAL_PROMPT)
 
-structured_response_eval = eval_llm.with_structured_output(
-    EvalResult,
+response_eval_chain = response_eval_prompt | eval_llm.with_structured_output(
+    ResponseEvalResult,
     method="json_mode"
 )
 
-structured_code_eval = eval_llm.with_structured_output(
-    EvalResult,
+code_eval_chain = code_eval_prompt | eval_llm.with_structured_output(
+    CodeEvalResult,
     method="json_mode"
 )
 
@@ -1177,79 +1170,99 @@ def get_analyst_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-def save_eval_result(source_table: str, source_id: int, eval_type: str, 
-                     score: int, dimensions: str, issues: str, verdict: str):
+def save_eval_result(source_table: str, source_id: int, eval_type: str,
+                     score: int, dimensions: str, issues: str, verdict: str,
+                     user_content: str = "", ai_content: str = "", created_at: str = ""):
     """保存评估结果到 eval_results 表"""
     try:
         conn = get_analyst_db_connection()
         with conn.cursor() as cursor:
+            # 如果没有传入 created_at，则使用当前时间
+            if not created_at:
+                cursor.execute("SELECT NOW()")
+                result = cursor.fetchone()
+                if result:
+                    created_at = result[0]
+                    # 如果是 datetime 对象，转换为字符串
+                    if hasattr(created_at, 'strftime'):
+                        created_at = created_at.strftime('%Y-%m-%d %H:%M:%S')
+            
             cursor.execute(
-                """INSERT INTO eval_results 
-                    (source_table, source_id, eval_type, score, dimensions, issues, verdict) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (source_table, source_id, eval_type, score, dimensions, issues, verdict)
+                """INSERT INTO eval_results
+                    (source_table, source_id, eval_type, user_content, ai_content, score, dimensions, issues, verdict, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (source_table, source_id, eval_type, user_content, ai_content, score, dimensions, issues, verdict, created_at)
             )
             conn.commit()
+            print(f"[保存成功] {source_table} id={source_id}, score={score}")
     except Exception as e:
-        print(f"保存评估结果失败: {e}")
+        print(f"[保存失败] {source_table} id={source_id}: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         conn.close()
 
-# 评估执行函数（后台线程）
-def evaluate_records_task(records: list, eval_type: str):
-    """后台线程执行评估任务"""
+# 评估执行函数（异步版本）
+async def evaluate_records_task_async(records: list, eval_type: str):
+    """异步执行评估任务"""
     global eval_progress
     with eval_lock:
         eval_progress["status"] = "running"
         eval_progress["total"] = len(records)
         eval_progress["completed"] = 0
     
-    for record in records:
-        try:
-            if eval_type == "response":
-                result: EvalResult = structured_response_eval.invoke({
-                    "user_content": record.get("user_content", ""),
-                    "ai_response": record.get("ai_content", "")
-                })
-            elif eval_type == "code":
-                exec_result = json.dumps({
-                    "success": record.get("is_success", False),
-                    "error": record.get("error_msg", "")
-                }, ensure_ascii=False)
-                result: EvalResult = structured_code_eval.invoke({
-                    "question": record.get("question", ""),
-                    "code": record.get("generated_code", ""),
-                    "exec_result": exec_result
-                })
-            else:
-                continue
-            
-            # 保存评估结果
-            save_eval_result(
-                source_table=record.get("source_table", ""),
-                source_id=record.get("id", 0),
-                eval_type=eval_type,
-                score=result.score,
-                dimensions=result.dimensions.model_dump_json(),
-                issues=result.issues,
-                verdict=result.verdict
-            )
-            
-        except Exception as e:
-            print(f"评估记录失败 (id={record.get('id')}): {e}")
-            # 失败时保存默认结果
-            save_eval_result(
-                source_table=record.get("source_table", ""),
-                source_id=record.get("id", 0),
-                eval_type=eval_type,
-                score=0,
-                dimensions="{}",
-                issues=f"评估失败: {str(e)}",
-                verdict="fail"
-            )
-        
-        with eval_lock:
-            eval_progress["completed"] += 1
+    semaphore = asyncio.Semaphore(3)
+    
+    async def eval_one(record):
+        async with semaphore:
+            try:
+                if eval_type == "response":
+                    result = await response_eval_chain.ainvoke({
+                        "user_content": record.get("user_content", ""),
+                        "ai_response": record.get("ai_content", "")
+                    })
+                elif eval_type == "code":
+                    exec_result = json.dumps({
+                        "success": record.get("is_success", False),
+                        "error": record.get("error_msg", "")
+                    }, ensure_ascii=False)
+                    result = await code_eval_chain.ainvoke({
+                        "question": record.get("question", ""),
+                        "code": record.get("generated_code", ""),
+                        "exec_result": exec_result
+                    })
+                
+                save_eval_result(
+                    source_table=record.get("source_table", ""),
+                    source_id=record.get("id", 0),
+                    eval_type=eval_type,
+                    score=result.score,
+                    dimensions=json.dumps(result.dimensions, ensure_ascii=False),
+                    issues=result.issues,
+                    verdict=result.verdict,
+                    user_content=record.get("user_content", ""),
+                    ai_content=record.get("ai_content", ""),
+                    created_at=record.get("created_at", "")
+                )
+            except Exception as e:
+                print(f"评估失败 (id={record.get('id')}): {e}")
+                save_eval_result(
+                    source_table=record.get("source_table", ""),
+                    source_id=record.get("id", 0),
+                    eval_type=eval_type,
+                    score=0,
+                    dimensions="{}",
+                    issues=f"评估失败: {str(e)}",
+                    verdict="fail",
+                    user_content=record.get("user_content", ""),
+                    ai_content=record.get("ai_content", ""),
+                    created_at=record.get("created_at", "")
+                )
+            finally:
+                with eval_lock:
+                    eval_progress["completed"] += 1
+    
+    await asyncio.gather(*[eval_one(r) for r in records])
     
     with eval_lock:
         eval_progress["status"] = "done"
@@ -1267,8 +1280,6 @@ class EvaluateRequest(BaseModel):
 class ExportRequest(BaseModel):
     min_score: int = Field(default=4)
     tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs"])
-    start_date: str = Field(default="")
-    end_date: str = Field(default="")
 
 # 1. 触发质量评估
 @app.post("/api/analyst/evaluate")
@@ -1319,7 +1330,8 @@ async def start_evaluation(request: EvaluateRequest):
                                         "source_table": table,
                                         "user_content": user_record["content"],
                                         "ai_content": r["content"],
-                                        "eval_type": "response"
+                                        "eval_type": "response",
+                                        "created_at": r["created_at"]
                                     })
                 
                 elif table == "chart_generation_logs":
@@ -1340,13 +1352,16 @@ async def start_evaluation(request: EvaluateRequest):
                             "generated_code": r["generated_code"],
                             "is_success": r["is_success"],
                             "error_msg": r["error_msg"],
-                            "eval_type": "code"
+                            "user_content": r["question"],
+                            "ai_content": r["generated_code"],
+                            "eval_type": "code",
+                            "created_at": r["created_at"]
                         })
         
         conn.close()
         
-        # 只评估前5条数据
-        all_records = all_records[:5]
+        # # 只评估前5条数据
+        # all_records = all_records[:5]
         
         if not all_records:
             return {"error": "没有找到符合条件的记录"}
@@ -1368,9 +1383,9 @@ async def start_evaluation(request: EvaluateRequest):
         
         def run_evaluation():
             if response_records:
-                evaluate_records_task(response_records, "response")
+                asyncio.run(evaluate_records_task_async(response_records, "response"))
             if code_records:
-                evaluate_records_task(code_records, "code")
+                asyncio.run(evaluate_records_task_async(code_records, "code"))
             with eval_lock:
                 eval_progress["status"] = "done"
         
@@ -1402,22 +1417,40 @@ async def get_evaluate_status():
 
 # 3. 获取评估结果
 @app.get("/api/analyst/results")
-async def get_results(min_score: int = 0, source_table: str = ""):
+async def get_results(
+    min_score: int = 0, 
+    source_table: str = "",
+    tables: str = "",
+    start_date: str = "",
+    end_date: str = ""
+):
     """获取评估结果统计"""
     try:
         conn = get_analyst_db_connection()
         with conn.cursor() as cursor:
-            where_clause = "WHERE score >= %s"
+            where_clause = "WHERE er.score >= %s"
             params = [min_score]
             
             if source_table:
-                where_clause += " AND source_table = %s"
+                where_clause += " AND er.source_table = %s"
                 params.append(source_table)
+            
+            # 支持多个数据来源筛选
+            if tables:
+                table_list = tables.split(",")
+                placeholders = ",".join(["%s"] * len(table_list))
+                where_clause += f" AND er.source_table IN ({placeholders})"
+                params.extend(table_list)
+            
+            # 日期范围筛选（与前端日期筛选条件保持一致）
+            if start_date and end_date:
+                where_clause += " AND DATE(er.created_at) BETWEEN %s AND %s"
+                params.extend([start_date, end_date])
             
             # 评分分布
             cursor.execute(f"""
                 SELECT score, COUNT(*) as count 
-                FROM eval_results 
+                FROM eval_results er
                 {where_clause}
                 GROUP BY score
                 ORDER BY score
@@ -1427,7 +1460,7 @@ async def get_results(min_score: int = 0, source_table: str = ""):
             # 各维度平均分
             cursor.execute(f"""
                 SELECT dimensions 
-                FROM eval_results 
+                FROM eval_results er
                 {where_clause}
             """, params)
             all_dimensions = cursor.fetchall()
@@ -1450,7 +1483,8 @@ async def get_results(min_score: int = 0, source_table: str = ""):
                 if dimension_counts[dim_name] > 0:
                     dimension_avg[dim_name] = round(dimension_avg[dim_name] / dimension_counts[dim_name], 2)
             
-            # 低分案例（score <= 3）
+            
+            # 低分案例（score <= 4）
             cursor.execute(f"""
                 SELECT er.*, 
                        ucl.content as user_content,
@@ -1458,8 +1492,8 @@ async def get_results(min_score: int = 0, source_table: str = ""):
                 FROM eval_results er
                 LEFT JOIN user_chat_logs ucl ON er.source_table = 'user_chat_logs' AND er.source_id = ucl.id
                 LEFT JOIN user_chat_logs ucl2 ON er.source_table = 'user_chat_logs' AND er.source_id = ucl2.id AND ucl2.role = 'ai'
-                {where_clause} AND er.score <= 3
-                ORDER BY er.score ASC, er.created_at DESC
+                {where_clause} AND er.score <= 4
+                ORDER BY er.score ASC
                 LIMIT 50
             """, params)
             low_score_cases = cursor.fetchall()
@@ -1491,13 +1525,8 @@ async def export_jsonl(request: ExportRequest):
     try:
         conn = get_analyst_db_connection()
         
-        date_filter = ""
-        params = [request.min_score]
-        if request.start_date and request.end_date:
-            date_filter = " AND DATE(er.created_at) BETWEEN %s AND %s"
-            params.extend([request.start_date, request.end_date])
-        
         table_filter = ""
+        params = [request.min_score]
         if request.tables:
             placeholders = ",".join(["%s"] * len(request.tables))
             table_filter = f" AND er.source_table IN ({placeholders})"
@@ -1507,8 +1536,8 @@ async def export_jsonl(request: ExportRequest):
             cursor.execute(f"""
                 SELECT er.* 
                 FROM eval_results er
-                WHERE er.score >= %s {date_filter} {table_filter}
-                ORDER BY er.created_at DESC
+                WHERE er.score >= %s {table_filter}
+                ORDER BY er.id DESC
             """, params)
             results = cursor.fetchall()
             

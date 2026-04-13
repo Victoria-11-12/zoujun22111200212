@@ -267,9 +267,9 @@ app.get('/api/analyst/overview', (req, res) => {
     const chatTrendSql = `
         SELECT DATE(created_at) as date, COUNT(*) as count 
         FROM user_chat_logs 
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
         GROUP BY DATE(created_at) 
-        ORDER BY date DESC 
-        LIMIT 30
+        ORDER BY date ASC
     `;
 
     // 2. 意图分布（将NULL或空值归类为"缺失"）
@@ -305,7 +305,7 @@ app.get('/api/analyst/overview', (req, res) => {
     // 执行所有查询
     db.query(chatTrendSql, (err, chatTrendResults) => {
         if (!err) {
-            result.chat_trend = chatTrendResults.reverse(); // 按时间正序
+            result.chat_trend = chatTrendResults; // 已经是按时间正序
         }
 
         db.query(intentSql, (err, intentResults) => {
