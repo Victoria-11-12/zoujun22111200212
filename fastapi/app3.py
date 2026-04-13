@@ -10,7 +10,9 @@ from fastapi import FastAPI,Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from typing import Dict, Optional
 from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
@@ -1036,27 +1038,38 @@ async def chart_generate(request: ChartRequest):
 # 十二、LLM 评估模块（分析师功能）
 # ============================================================
 
-# 评估结果结构化输出模型
-class EvalResult(BaseModel):
-    score: int = Field(description="综合评分（1-5分）")
-    dimensions: dict = Field(description="各维度评分详情")
-    issues: str = Field(description="存在的问题描述")
-    verdict: str = Field(description="评估结论：pass/review/fail")
+# 评估结果结构化模型
+class DimensionScores(BaseModel):
+    relevance: Optional[int] = Field(None, description="相关性 1-5")
+    completeness: Optional[int] = Field(None, description="完整性 1-5")
+    accuracy: Optional[int] = Field(None, description="准确性 1-5")
+    format: Optional[int] = Field(None, description="格式 1-5")
+    runnable: Optional[int] = Field(None, description="可运行性 1-5")
+    chart_completeness: Optional[int] = Field(None, description="图表完整性 1-5")
+    toolbox: Optional[int] = Field(None, description="工具箱 1-5")
+    unit_label: Optional[int] = Field(None, description="单位标注 1-5")
+    chart_type_match: Optional[int] = Field(None, description="类型匹配 1-5")
 
-# 评估模块专用 LLM（使用独立的 API Key 和 Model）
-eval_llm = ChatOpenAI(
-    model=os.getenv('EVAL_MODEL_NAME', 'deepseek-reasoner'),
-    openai_api_key=os.getenv('EVAL_API_KEY', os.getenv('API_KEY')),
-    openai_api_base=os.getenv('API_BASE'),
+
+class EvalResult(BaseModel):
+    score: int = Field(description="总分 1-5")
+    dimensions: DimensionScores = Field(description="各维度得分")
+    issues: str = Field(description="问题描述，如果没有问题则填'无'")
+    verdict: str = Field(description="判定结果: pass/review/fail")
+
+
+# 评估模块专用 LLM（使用 DeepSeek）
+eval_llm = ChatDeepSeek(
+    model=os.getenv('EVAL_MODEL_NAME'),
+    api_key=os.getenv('EVAL_API_KEY'),
+    base_url=os.getenv('API_BASE'),
     temperature=0
 )
 
-# 使用结构化输出的评估链
-eval_chain = eval_llm.with_structured_output(EvalResult)
 
 # 分析师数据库连接（只读权限查询日志表，读写权限操作 eval_results 表）
-DB_USER_ANALYST = os.getenv('DB_USER_ANALYST', os.getenv('DB_USER'))
-DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST', os.getenv('DB_PASS'))
+DB_USER_ANALYST = os.getenv('DB_USER_ANALYST')
+DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST')
 DB_URI_ANALYST = f"mysql+pymysql://{DB_USER_ANALYST}:{DB_PASS_ANALYST}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 
 # 评估进度全局变量
@@ -1087,7 +1100,18 @@ verdict 规则：
 - score == 3：review
 - score <= 2：fail
 
-请输出结构化的评估结果。"""
+请只输出 JSON，不要其他内容，格式如下：
+{
+    "score": <整数1-5>,
+    "dimensions": {
+        "relevance": <整数1-5>,
+        "completeness": <整数1-5>,
+        "accuracy": <整数1-5>,
+        "format": <整数1-5>
+    },
+    "issues": "<问题描述>",
+    "verdict": "<pass/review/fail>"
+}"""
 
 CODE_EVAL_PROMPT = """你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
 
@@ -1114,7 +1138,33 @@ verdict 规则：
 - score == 3：review
 - score <= 2：fail
 
-请输出结构化的评估结果。"""
+请只输出 JSON，不要其他内容，格式如下：
+{
+    "score": <整数1-5>,
+    "dimensions": {
+        "runnable": <整数1-5>,
+        "chart_completeness": <整数1-5>,
+        "toolbox": <整数1-5>,
+        "unit_label": <整数1-5>,
+        "chart_type_match": <整数1-5>
+    },
+    "issues": "<问题描述>",
+    "verdict": "<pass/review/fail>"
+}"""
+
+# 使用链式调用：Prompt -> LLM -> 结构化输出
+response_eval_prompt = ChatPromptTemplate.from_template(RESPONSE_EVAL_PROMPT)
+code_eval_prompt = ChatPromptTemplate.from_template(CODE_EVAL_PROMPT)
+
+structured_response_eval = eval_llm.with_structured_output(
+    EvalResult,
+    method="json_mode"
+)
+
+structured_code_eval = eval_llm.with_structured_output(
+    EvalResult,
+    method="json_mode"
+)
 
 # 分析师数据库操作函数（使用 analyst 用户连接）
 def get_analyst_db_connection():
@@ -1157,29 +1207,22 @@ def evaluate_records_task(records: list, eval_type: str):
     for record in records:
         try:
             if eval_type == "response":
-                # 对话质量评估
-                user_content = record.get("content", "") if record.get("role") == "user" else ""
-                ai_content = record.get("content", "") if record.get("role") == "ai" else ""
-                prompt = RESPONSE_EVAL_PROMPT.format(
-                    user_content=user_content,
-                    ai_response=ai_content
-                )
+                result: EvalResult = structured_response_eval.invoke({
+                    "user_content": record.get("user_content", ""),
+                    "ai_response": record.get("ai_content", "")
+                })
             elif eval_type == "code":
-                # 绘图代码评估
                 exec_result = json.dumps({
                     "success": record.get("is_success", False),
                     "error": record.get("error_msg", "")
                 }, ensure_ascii=False)
-                prompt = CODE_EVAL_PROMPT.format(
-                    question=record.get("question", ""),
-                    code=record.get("generated_code", ""),
-                    exec_result=exec_result
-                )
+                result: EvalResult = structured_code_eval.invoke({
+                    "question": record.get("question", ""),
+                    "code": record.get("generated_code", ""),
+                    "exec_result": exec_result
+                })
             else:
                 continue
-            
-            # 调用 LLM 进行评估（使用结构化输出）
-            result = eval_chain.invoke(prompt)
             
             # 保存评估结果
             save_eval_result(
@@ -1187,7 +1230,7 @@ def evaluate_records_task(records: list, eval_type: str):
                 source_id=record.get("id", 0),
                 eval_type=eval_type,
                 score=result.score,
-                dimensions=json.dumps(result.dimensions, ensure_ascii=False),
+                dimensions=result.dimensions.model_dump_json(),
                 issues=result.issues,
                 verdict=result.verdict
             )
@@ -1302,63 +1345,34 @@ async def start_evaluation(request: EvaluateRequest):
         
         conn.close()
         
+        # 只评估前5条数据
+        all_records = all_records[:5]
+        
         if not all_records:
             return {"error": "没有找到符合条件的记录"}
         
-        # 启动后台线程执行评估
-        def run_evaluation():
-            for record in all_records:
-                eval_type = record.pop("eval_type")
-                try:
-                    if eval_type == "response":
-                        prompt = RESPONSE_EVAL_PROMPT.format(
-                            user_content=record.get("user_content", ""),
-                            ai_response=record.get("ai_content", "")
-                        )
-                    else:  # code
-                        exec_result = json.dumps({
-                            "success": record.get("is_success", False),
-                            "error": record.get("error_msg", "")
-                        }, ensure_ascii=False)
-                        prompt = CODE_EVAL_PROMPT.format(
-                            question=record.get("question", ""),
-                            code=record.get("generated_code", ""),
-                            exec_result=exec_result
-                        )
-                    
-                    result = eval_chain.invoke(prompt)
-                    save_eval_result(
-                        source_table=record.get("source_table", ""),
-                        source_id=record.get("id", 0),
-                        eval_type=eval_type,
-                        score=result.score,
-                        dimensions=json.dumps(result.dimensions, ensure_ascii=False),
-                        issues=result.issues,
-                        verdict=result.verdict
-                    )
-                    
-                except Exception as e:
-                    print(f"评估失败 (id={record.get('id')}): {e}")
-                    save_eval_result(
-                        source_table=record.get("source_table", ""),
-                        source_id=record.get("id", 0),
-                        eval_type=eval_type,
-                        score=0,
-                        dimensions="{}",
-                        issues=f"评估失败: {str(e)}",
-                        verdict="fail"
-                    )
-                
-                with eval_lock:
-                    eval_progress["completed"] += 1
-            
-            with eval_lock:
-                eval_progress["status"] = "done"
+        # 准备评估任务数据
+        eval_tasks = []
+        for record in all_records:
+            eval_type = record.pop("eval_type")
+            eval_tasks.append((record, eval_type))
+        
+        # 按类型分组记录
+        response_records = [r for r, t in eval_tasks if t == "response"]
+        code_records = [r for r, t in eval_tasks if t == "code"]
         
         with eval_lock:
             eval_progress["status"] = "running"
             eval_progress["total"] = len(all_records)
             eval_progress["completed"] = 0
+        
+        def run_evaluation():
+            if response_records:
+                evaluate_records_task(response_records, "response")
+            if code_records:
+                evaluate_records_task(code_records, "code")
+            with eval_lock:
+                eval_progress["status"] = "done"
         
         thread = threading.Thread(target=run_evaluation)
         thread.start()
