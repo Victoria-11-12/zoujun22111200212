@@ -12,10 +12,10 @@ window.loadUserList = function() {
                     tr.innerHTML = `
                         <td>${user.id}</td>
                         <td>${user.username}</td>
-                        <td><span class="badge ${user.role}">${user.role}</span></td>
+                        <td data-role="${user.role}"><span class="badge ${user.role}">${user.role}</span></td>
                         <td>${new Date(user.create_time).toLocaleString()}</td>
                         <td>
-                            <button class="edit-btn" onclick="editUser(${user.id})">修改</button>
+                            <button class="edit-btn" onclick="editUser(${user.id}, this)">修改</button>
                             <button class="del-btn" onclick="deleteUser(${user.id})">删除</button>
                         </td>
                     `;
@@ -36,19 +36,45 @@ window.deleteUser = function(id) {
     }
 };
 
-window.editUser = function(id) {
-    const newRole = prompt("将该用户角色修改为 (user/admin):");
-    if (newRole !== 'user' && newRole !== 'admin') return alert("请输入有效的角色名");
-    fetch(`http://localhost:3000/api/admin/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole })
-    })
-    .then(res => res.json())
-    .then(res => {
-        alert(res.msg);
-        loadUserList();
-    });
+window.editUser = function(id, btn) {
+    const tr = btn.closest('tr');
+    const roleCell = tr.querySelector('td:nth-child(3)');
+    const currentRole = roleCell.dataset.role || roleCell.textContent.trim();
+    
+    if (roleCell.querySelector('select')) return;
+    
+    roleCell.innerHTML = `
+        <select class="role-select" data-id="${id}">
+            <option value="user" ${currentRole === 'user' ? 'selected' : ''}>user</option>
+            <option value="analyst" ${currentRole === 'analyst' ? 'selected' : ''}>analyst</option>
+            <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>admin</option>
+        </select>
+    `;
+    
+    const select = roleCell.querySelector('select');
+    select.focus();
+    
+    select.onchange = function() {
+        const newRole = this.value;
+        fetch(`http://localhost:3000/api/admin/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: newRole })
+        })
+        .then(res => res.json())
+        .then(res => {
+            alert(res.msg);
+            loadUserList();
+        });
+    };
+    
+    select.onblur = function() {
+        setTimeout(() => {
+            if (!roleCell.contains(document.activeElement)) {
+                loadUserList();
+            }
+        }, 150);
+    };
 };
 
 // 新增用户
@@ -57,11 +83,10 @@ document.querySelector('.add-btn').onclick = function() {
     if (!username) return;
     const password = prompt("请输入初始密码:");
     if (!password) return;
-    const role = prompt("请输入角色 (user 或 admin):", "user");
     fetch('http://localhost:3000/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, role })
+        body: JSON.stringify({ username, password, role: 'user' })
     })
     .then(res => res.json())
     .then(res => {

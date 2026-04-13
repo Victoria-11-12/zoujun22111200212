@@ -87,7 +87,10 @@ function renderChatTrendChart(data) {
         return;
     }
 
-    const dates = data.map(item => item.date);
+    const dates = data.map(item => {
+        const date = new Date(item.date);
+        return `${date.getMonth() + 1}-${date.getDate()}`;
+    });
     const counts = data.map(item => item.count);
 
     const option = {

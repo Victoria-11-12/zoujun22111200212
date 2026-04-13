@@ -75,6 +75,7 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 .badge { padding: 3px 8px; border-radius: 10px; font-size: 12px; }
 .badge.admin { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
 .badge.user { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.badge.analyst { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
 
 .del-btn { background: #ff4d4f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
 
@@ -518,4 +519,22 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 
 .search-results-table .gross-value {
   color: #ffeb3b;
+}
+
+/* 角色下拉框样式 */
+.role-select {
+    padding: 4px 8px;
+    border: 1px solid #1890ff;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    width: 100%;
+}
+
+.role-select:focus {
+    border-color: #40a9ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }

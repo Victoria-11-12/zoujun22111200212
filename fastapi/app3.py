@@ -1484,7 +1484,7 @@ async def get_results(
                     dimension_avg[dim_name] = round(dimension_avg[dim_name] / dimension_counts[dim_name], 2)
             
             
-            # 低分案例（score <= 4）
+            # 低分案例（score <= 3）
             cursor.execute(f"""
                 SELECT er.*, 
                        ucl.content as user_content,
@@ -1492,7 +1492,7 @@ async def get_results(
                 FROM eval_results er
                 LEFT JOIN user_chat_logs ucl ON er.source_table = 'user_chat_logs' AND er.source_id = ucl.id
                 LEFT JOIN user_chat_logs ucl2 ON er.source_table = 'user_chat_logs' AND er.source_id = ucl2.id AND ucl2.role = 'ai'
-                {where_clause} AND er.score <= 4
+                {where_clause} AND er.score <= 3
                 ORDER BY er.score ASC
                 LIMIT 50
             """, params)

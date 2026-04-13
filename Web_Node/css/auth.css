@@ -80,14 +80,15 @@ h2 {
 .login-options {
     margin-bottom: 20px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .login-option {
     display: flex;
     align-items: center;
-    font-size: 14px;
+    font-size: 12px;
     cursor: pointer;
     color: rgba(255,255,255,0.9);
     transition: color 0.2s;
