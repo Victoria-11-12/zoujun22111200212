@@ -265,10 +265,10 @@ app.get('/api/analyst/overview', (req, res) => {
 
     // 1. 对话量趋势（最近30天）
     const chatTrendSql = `
-        SELECT DATE(created_at) as date, COUNT(*) as count 
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as date, COUNT(*) as count 
         FROM user_chat_logs 
-        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        GROUP BY DATE(created_at) 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d') 
         ORDER BY date ASC
     `;
 
@@ -305,7 +305,11 @@ app.get('/api/analyst/overview', (req, res) => {
     // 执行所有查询
     db.query(chatTrendSql, (err, chatTrendResults) => {
         if (!err) {
-            result.chat_trend = chatTrendResults; // 已经是按时间正序
+            // 格式化日期为 YYYY-MM-DD 字符串
+            result.chat_trend = chatTrendResults.map(row => ({
+                date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date,
+                count: row.count
+            }));
         }
 
         db.query(intentSql, (err, intentResults) => {
