@@ -65,3 +65,125 @@ async function handleDeepPrediction(e) {
         resultValue.innerText = '服务器连接失败';
     }
 }
+
+async function loadROIComparison() {
+    const chartDom = document.getElementById('roiComparisonChart');
+    if (!chartDom) return;
+    
+    const myChart = echarts.init(chartDom);
+    
+    try {
+        const response = await fetch('http://localhost:5000/api/flask/roi_comparison');
+        const res = await response.json();
+        
+        console.log('API返回数据量:', res.data ? res.data.length : 0);
+        
+        if (res.code === 200 && res.data.length > 0) {
+            const scatterData = res.data.map(item => [item.actual_roi, item.predicted_roi, item.movie_title]);
+            
+            let maxROI = 0;
+            res.data.forEach(item => {
+                const maxVal = Math.max(item.actual_roi, item.predicted_roi);
+                if (maxVal > maxROI) maxROI = maxVal;
+            });
+            
+            console.log('最大ROI值:', maxROI);
+            console.log('散点数据量:', scatterData.length);
+            
+            const option = {
+                title: {
+                    text: '真实ROI vs 预测ROI 散点图',
+                    left: 'center',
+                    top: 10,
+                    textStyle: {
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        return `电影: ${params.data[2]}<br/>` +
+                               `真实ROI: ${params.data[0].toFixed(2)}<br/>` +
+                               `预测ROI: ${params.data[1].toFixed(2)}`;
+                    }
+                },
+                legend: {
+                    data: ['数据点', '完美预测线'],
+                    top: 40
+                },
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    bottom: '15%',
+                    top: '20%',
+                    containLabel: true
+                },
+                xAxis: {
+                    name: '真实ROI',
+                    nameLocation: 'middle',
+                    nameGap: 30,
+                    type: 'value',
+                    min: 0,
+                    max: maxROI * 1.1,
+                    axisLabel: {
+                        formatter: '{value}'
+                    }
+                },
+                yAxis: {
+                    name: '预测ROI',
+                    nameLocation: 'middle',
+                    nameGap: 40,
+                    type: 'value',
+                    min: 0,
+                    max: maxROI * 1.1,
+                    axisLabel: {
+                        formatter: '{value}'
+                    }
+                },
+                series: [
+                    {
+                        name: '数据点',
+                        type: 'scatter',
+                        data: scatterData,
+                        symbolSize: 8,
+                        itemStyle: {
+                            color: '#1890ff',
+                            opacity: 0.7
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: '#40a9ff',
+                                borderColor: '#1890ff',
+                                borderWidth: 2
+                            }
+                        }
+                    },
+                    {
+                        name: '完美预测线',
+                        type: 'line',
+                        data: [[0, 0], [maxROI * 1.1, maxROI * 1.1]],
+                        lineStyle: {
+                            color: '#ff4d4f',
+                            width: 2,
+                            type: 'dashed'
+                        },
+                        symbol: 'none',
+                        silent: true
+                    }
+                ]
+            };
+            
+            myChart.setOption(option);
+        } else {
+            chartDom.innerHTML = '<p style="text-align:center; padding:50px; color:#999;">暂无数据</p>';
+        }
+    } catch (error) {
+        console.error('加载ROI对比数据失败:', error);
+        chartDom.innerHTML = '<p style="text-align:center; padding:50px; color:#ff4d4f;">数据加载失败</p>';
+    }
+    
+    window.addEventListener('resize', function() {
+        myChart.resize();
+    });
+}

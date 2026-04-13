@@ -145,5 +145,58 @@ def predict_deep():
         traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
+
+@app.route('/api/flask/roi_comparison', methods=['GET'])
+def get_roi_comparison():
+    try:
+        response = requests.get(f"{NODE_API_URL}/movies")
+        movies = response.json()
+        df = pd.DataFrame(movies)
+        
+        if df.empty:
+            return jsonify({"code": 200, "data": []})
+        
+        print(f"原始数据量：{len(df)}")
+        
+        if 'budget' in df.columns:
+            df['budget'] = pd.to_numeric(df['budget'], errors='coerce')
+        if 'gross' in df.columns:
+            df['gross'] = pd.to_numeric(df['gross'], errors='coerce')
+        
+        df = df.dropna(subset=['budget', 'gross'])
+        df = df[(df['budget'] > 0) & (df['gross'] > 0)]
+        
+        print(f"过滤预算和票房后的数据量：{len(df)}")
+        
+        if df.empty:
+            return jsonify({"code": 200, "data": []})
+        
+        df['actual_roi'] = df['gross'] / df['budget']
+        
+        df_features = prepare_features(df.copy())
+        predictions_log = rf_model.predict(df_features)
+        predictions = np.expm1(predictions_log)
+        
+        df['predicted_roi'] = predictions / df['budget']
+        
+        df = df[df['actual_roi'] > 0]
+        
+        df_before_outlier = len(df)
+        df = df[df['actual_roi'] <= 100]
+        df = df[df['predicted_roi'] <= 100]
+        
+        print(f"过滤异常值前的数据量：{df_before_outlier}")
+        print(f"过滤异常值后的数据量：{len(df)} (移除了 {df_before_outlier - len(df)} 条极端异常值)")
+        print(f"最终 ROI 对比数据量：{len(df)}")
+        
+        result = df[['movie_title', 'actual_roi', 'predicted_roi']].to_dict('records')
+        
+        return jsonify({"code": 200, "data": result})
+    except Exception as e:
+        print(f"ROI对比接口异常：{e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"code": 500, "msg": str(e)})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

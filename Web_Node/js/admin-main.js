@@ -36,6 +36,7 @@ function switchPanel(targetId) {
         loadMessageList();
     } else if (targetId === 'panel-predict') {
         loadDarkHorses();
+        loadROIComparison();
         const predForm = document.getElementById('predictionForm');
         if (predForm) {
             predForm.onsubmit = handleDeepPrediction;
