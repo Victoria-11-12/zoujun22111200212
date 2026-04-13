@@ -339,6 +339,143 @@ app.get('/api/analyst/overview', (req, res) => {
     });
 });
 
+// ------------------- 分析师：预览微调数据 -------------------
+app.get('/api/analyst/preview', (req, res) => {
+    const { min_score = 4, tables, start_date, end_date, limit = 10 } = req.query;
+    
+    // 构建查询条件
+    let whereClause = 'WHERE er.score >= ?';
+    const params = [parseInt(min_score)];
+    
+    // 数据来源筛选
+    if (tables) {
+        const tableList = Array.isArray(tables) ? tables : [tables];
+        if (tableList.length > 0) {
+            whereClause += ` AND er.source_table IN (${tableList.map(() => '?').join(',')})`;
+            params.push(...tableList);
+        }
+    }
+    
+    // 时间范围筛选
+    if (start_date) {
+        whereClause += ' AND er.created_at >= ?';
+        params.push(start_date);
+    }
+    if (end_date) {
+        whereClause += ' AND er.created_at <= ?';
+        params.push(end_date + ' 23:59:59');
+    }
+    
+    // 查询总数
+    const countSql = `SELECT COUNT(*) as total FROM eval_results er ${whereClause}`;
+    
+    // 查询数据（限制条数）
+    const dataSql = `
+        SELECT er.id, er.source_table, er.source_id, er.score, er.verdict,
+               er.user_content, er.ai_content, er.created_at
+        FROM eval_results er
+        ${whereClause}
+        ORDER BY er.score DESC, er.id DESC
+        LIMIT ?
+    `;
+    params.push(parseInt(limit));
+    
+    db.query(countSql, params.slice(0, -1), (err, countResult) => {
+        if (err) {
+            console.error('查询总数失败:', err);
+            return res.status(500).json({ error: '查询失败' });
+        }
+        
+        const total = countResult[0]?.total || 0;
+        
+        db.query(dataSql, params, (err, results) => {
+            if (err) {
+                console.error('查询预览数据失败:', err);
+                return res.status(500).json({ error: '查询失败' });
+            }
+            
+            // 转换为微调数据格式
+            const records = results.map(row => ({
+                messages: [
+                    { role: "user", content: row.user_content },
+                    { role: "assistant", content: row.ai_content }
+                ],
+                score: row.score,
+                verdict: row.verdict,
+                source_table: row.source_table,
+                source_id: row.source_id
+            }));
+            
+            res.json({ total, records });
+        });
+    });
+});
+
+// ------------------- 分析师：导出 JSONL -------------------
+app.get('/api/analyst/export', (req, res) => {
+    const { min_score = 4, tables, start_date, end_date } = req.query;
+    
+    // 构建查询条件
+    let whereClause = 'WHERE er.score >= ? AND er.verdict = "pass"';
+    const params = [parseInt(min_score)];
+    
+    // 数据来源筛选
+    if (tables) {
+        const tableList = Array.isArray(tables) ? tables : [tables];
+        if (tableList.length > 0) {
+            whereClause += ` AND er.source_table IN (${tableList.map(() => '?').join(',')})`;
+            params.push(...tableList);
+        }
+    }
+    
+    // 时间范围筛选
+    if (start_date) {
+        whereClause += ' AND er.created_at >= ?';
+        params.push(start_date);
+    }
+    if (end_date) {
+        whereClause += ' AND er.created_at <= ?';
+        params.push(end_date + ' 23:59:59');
+    }
+    
+    const sql = `
+        SELECT er.user_content, er.ai_content, er.score
+        FROM eval_results er
+        ${whereClause}
+        AND er.user_content IS NOT NULL 
+        AND er.ai_content IS NOT NULL
+        ORDER BY er.score DESC, er.id DESC
+    `;
+    
+    db.query(sql, params, (err, results) => {
+        if (err) {
+            console.error('导出数据失败:', err);
+            return res.status(500).json({ error: '导出失败' });
+        }
+        
+        // 转换为 JSONL 格式
+        const jsonlLines = results.map(row => {
+            return JSON.stringify({
+                messages: [
+                    { role: "user", content: row.user_content },
+                    { role: "assistant", content: row.ai_content }
+                ]
+            });
+        });
+        
+        const jsonlContent = jsonlLines.join('\n');
+        
+        // 生成文件名
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        const filename = `fine_tune_data_${timestamp}.jsonl`;
+        
+        // 设置响应头
+        res.setHeader('Content-Type', 'application/jsonl');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(jsonlContent);
+    });
+});
+
 app.listen(3000, () => {
     console.log('--------------------------------------');
     console.log('后端启动成功');
