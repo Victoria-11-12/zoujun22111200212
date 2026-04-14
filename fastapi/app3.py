@@ -195,7 +195,7 @@ CREATE TABLE movies (
 ])
 
 sql_agent = create_tool_calling_agent(llm=llm, tools=user_toolkit, prompt=SQL_PROMPT)
-sql_executor = AgentExecutor(agent=sql_agent, tools=user_toolkit, verbose=True, max_iterations=2, handle_parsing_errors=True)
+sql_executor = AgentExecutor(agent=sql_agent, tools=user_toolkit, verbose=True, max_iterations=4, handle_parsing_errors=True)
 
 # ============================================================
 # 四、意图判断链
@@ -844,7 +844,12 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 7. X轴和Y轴必须设置 name 属性显示数据含义，例如：
    xaxis_opts=opts.AxisOpts(name="电影名称"), yaxis_opts=opts.AxisOpts(name="票房（美元）")
 8. 必须添加工具箱（支持保存图片），例如：
-   toolbox_opts=opts.ToolboxOpts(feature=opts.ToolBoxFeatureOpts(save_as_image=True))
+   toolbox_opts=opts.ToolboxOpts(
+    feature=opts.ToolBoxFeatureOpts(
+        save_as_image=opts.ToolBoxFeatureSaveAsImageOpts()
+    )
+)
+注意： save_as_image 的值必须是 ToolBoxFeatureSaveAsImageOpts() 实例，不能写 True，否则按钮可能不显示
 9. 图表标题通过 set_global_opts 的 title_opts 设置（注意：set_global_opts 是图表实例的方法，不是独立函数）
 10. 柱状图/折线图数据较多时，X轴标签倾斜显示：axislabel_opts=opts.LabelOpts(rotate=30)
 11.【重要】所有图表都必须包含 toolbox_opts，否则用户无法下载图片！
@@ -861,7 +866,11 @@ chart.set_global_opts(
     title_opts=opts.TitleOpts(title="票房对比"),
     xaxis_opts=opts.AxisOpts(name="电影"),
     yaxis_opts=opts.AxisOpts(name="票房（美元）"),
-    toolbox_opts=opts.ToolboxOpts(feature=opts.ToolBoxFeatureOpts(save_as_image=True))
+    toolbox_opts=opts.ToolboxOpts(
+        feature=opts.ToolBoxFeatureOpts(
+            save_as_image=opts.ToolBoxFeatureSaveAsImageOpts()   # 使用实例对象，而非 True
+        )
+    )
 )
 CHART_HTML = chart.render_embed()
 ```

@@ -182,8 +182,8 @@ def get_roi_comparison():
         df = df[df['actual_roi'] > 0]
         
         df_before_outlier = len(df)
-        df = df[df['actual_roi'] <= 100]
-        df = df[df['predicted_roi'] <= 100]
+        df = df[df['actual_roi'] <= 6]
+        df = df[df['predicted_roi'] <= 6]
         
         print(f"过滤异常值前的数据量：{df_before_outlier}")
         print(f"过滤异常值后的数据量：{len(df)} (移除了 {df_before_outlier - len(df)} 条极端异常值)")

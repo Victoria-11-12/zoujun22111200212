@@ -79,18 +79,12 @@ async function loadROIComparison() {
         console.log('API返回数据量:', res.data ? res.data.length : 0);
         
         if (res.code === 200 && res.data.length > 0) {
-            const scatterData = res.data.map(item => [item.actual_roi, item.predicted_roi, item.movie_title]);
+            const filteredData = res.data.filter(item => item.actual_roi <= 6 && item.predicted_roi <= 6);
+            const scatterData = filteredData.map(item => [item.actual_roi, item.predicted_roi, item.movie_title]);
             
-            let maxROI = 0;
-            res.data.forEach(item => {
-                const maxVal = Math.max(item.actual_roi, item.predicted_roi);
-                if (maxVal > maxROI) maxROI = maxVal;
-            });
-            
-            console.log('最大 ROI 值:', maxROI);
             console.log('散点数据量:', scatterData.length);
             
-            const axisMax = Math.ceil(maxROI * 1.1 / 10) * 10;
+            const axisMax = 7;
             
             const option = {
                 title: {
@@ -121,6 +115,15 @@ async function loadROIComparison() {
                     top: '20%',
                     containLabel: true
                 },
+                toolbox: {
+                    show: true,
+                    feature: {
+                        dataZoom: {},
+                        dataView: { readOnly: false },
+                        restore: {},
+                        saveAsImage: {}
+                    }
+                },
                 xAxis: {
                     name: '真实 ROI',
                     nameLocation: 'middle',
@@ -128,7 +131,7 @@ async function loadROIComparison() {
                     type: 'value',
                     min: 0,
                     max: axisMax,
-                    interval: axisMax / 5,
+                    interval: 1,
                     axisLabel: {
                         formatter: '{value}'
                     }
@@ -140,7 +143,7 @@ async function loadROIComparison() {
                     type: 'value',
                     min: 0,
                     max: axisMax,
-                    interval: axisMax / 5,
+                    interval: 1,
                     axisLabel: {
                         formatter: '{value}'
                     }
