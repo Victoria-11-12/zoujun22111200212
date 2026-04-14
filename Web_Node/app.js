@@ -122,7 +122,6 @@ app.get('/api/movies', (req, res) => {
 
 // ------------------- 管理员：获取所有用户列表 -------------------
 app.get('/api/admin/users', (req, res) => {
-    // 简单起见，我们先不在这里做复杂的 Token 验证，先让数据跑通
     const sql = 'SELECT id, username, role, create_time FROM users';
     db.query(sql, (err, results) => {
         if (err) return res.send({ code: 500, msg: '获取用户列表失败' });
