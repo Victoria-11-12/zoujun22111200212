@@ -626,7 +626,6 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 /* --- 2. 通用透明皮肤 (Glassmorphism) --- */
 .panel.glass-theme {
     background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(15px);
     border: 1px solid var(--theme-color);
     border-radius: 12px;
     position: relative;
