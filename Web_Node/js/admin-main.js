@@ -19,6 +19,17 @@ function switchPanel(targetId) {
     document.querySelector(`[data-target="${targetId}"]`).classList.add('active');
     document.getElementById(targetId).classList.add('active');
     
+    // 切换背景
+    const mainContent = document.querySelector('.main-content');
+    mainContent.classList.remove('panel-user-active', 'panel-log-active', 'panel-message-active');
+    if (targetId === 'panel-user') {
+        mainContent.classList.add('panel-user-active');
+    } else if (targetId === 'panel-log') {
+        mainContent.classList.add('panel-log-active');
+    } else if (targetId === 'panel-message') {
+        mainContent.classList.add('panel-message-active');
+    }
+    
     // AI 助手模块不显示标题
     if (targetId !== 'panel-ai') {
         currentTitle.innerText = document.querySelector(`[data-target="${targetId}"]`).innerText;

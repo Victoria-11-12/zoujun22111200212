@@ -30,7 +30,16 @@ body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #
     flex-direction: column; 
     position: relative;
     overflow-y: auto;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
+
+/* 面板激活时显示对应背景 */
+.main-content.panel-user-active { background-image: url('../img/luka1.png'); }
+.main-content.panel-log-active { background-image: url('../img/luka2.png'); }
+.main-content.panel-message-active { background-image: url('../img/luka3.png'); }
 .content-header { background: white; padding: 20px 30px; box-shadow: 0 1px 4px rgba(0,21,41,.08); }
 
 .panel { display: none; padding: 30px; flex: 1;
@@ -607,4 +616,53 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
     width: 100%;
     height: 600px;
     padding: 20px;
+}
+
+/* --- 1. 定义三套基调变量 --- */
+#panel-user { --theme-color: #00f6ff; --theme-bg: rgba(0, 246, 255, 0.15); }
+#panel-log { --theme-color: #ffb7f3; --theme-bg: rgba(255, 183, 243, 0.15); }
+#panel-message { --theme-color: #b3ffb3; --theme-bg: rgba(179, 255, 179, 0.15); }
+
+/* --- 2. 通用透明皮肤 (Glassmorphism) --- */
+.panel.glass-theme {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--theme-color);
+    border-radius: 12px;
+    position: relative;
+    overflow: visible !important;
+}
+
+/* --- 3. 内部元素透传 --- */
+.glass-theme .data-table {
+    background: transparent !important;
+    color: #333;
+}
+
+.glass-theme .data-table th {
+    background: var(--theme-bg) !important;
+    color: var(--theme-color) !important;
+    border-bottom: 2px solid var(--theme-color) !important;
+}
+
+.glass-theme .data-table td {
+    background: transparent !important;
+    color: #333 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.glass-theme .add-btn {
+    background: var(--theme-color);
+    box-shadow: 0 0 10px var(--theme-bg);
+    border: none;
+}
+
+.glass-theme input[type="text"] {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid var(--theme-color) !important;
+}
+
+.glass-theme input[type="text"]:focus {
+    border-color: var(--theme-color) !important;
+    box-shadow: 0 0 5px var(--theme-bg) !important;
 }
