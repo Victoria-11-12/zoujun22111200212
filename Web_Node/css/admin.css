@@ -40,7 +40,7 @@ body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #
 .main-content.panel-user-active { background-image: url('../img/luka1.png'); }
 .main-content.panel-log-active { background-image: url('../img/luka2.png'); }
 .main-content.panel-message-active { background-image: url('../img/luka3.png'); }
-.content-header { background: white; padding: 20px 30px; box-shadow: 0 1px 4px rgba(0,21,41,.08); }
+
 
 .panel { display: none; padding: 30px; flex: 1;
         overflow: visible;
@@ -174,9 +174,15 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 }
 
 #chartConfigBody td:first-child {
-    color: #161717;   /* 亮蓝色，与整体风格一致 */
+    color: #fff;
     font-weight: bold;
-    text-shadow: 0 0 2px rgba(16, 45, 46, 0.5); /* 可选：增加发光效果 */
+    text-shadow: 0 0 2px rgba(16, 45, 46, 0.5);
+}
+
+#chartConfigBody {
+    background-image: url('../img/luka.png.jpg');
+    background-size: cover;
+    background-position: center;
 }
 
 /* 图表超市卡片头部 */
@@ -620,8 +626,8 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 
 /* --- 1. 定义三套基调变量 --- */
 #panel-user { --theme-color: #00f6ff; --theme-bg: rgba(0, 246, 255, 0.15); }
-#panel-log { --theme-color: #ffb7f3; --theme-bg: rgba(255, 183, 243, 0.15); }
-#panel-message { --theme-color: #b3ffb3; --theme-bg: rgba(179, 255, 179, 0.15); }
+#panel-log { --theme-color: #ff69b4; --theme-bg: rgba(255, 105, 180, 0.25); }
+#panel-message { --theme-color: #32CD32; --theme-bg: rgba(50, 205, 50, 0.25); }
 
 /* --- 2. 通用透明皮肤 (Glassmorphism) --- */
 .panel.glass-theme {
@@ -635,19 +641,51 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 /* --- 3. 内部元素透传 --- */
 .glass-theme .data-table {
     background: transparent !important;
-    color: #333;
+    color: white;
 }
 
 .glass-theme .data-table th {
     background: var(--theme-bg) !important;
-    color: var(--theme-color) !important;
+    color: white !important;
     border-bottom: 2px solid var(--theme-color) !important;
 }
 
 .glass-theme .data-table td {
-    background: transparent !important;
-    color: #333 !important;
+    background: var(--theme-bg) !important;
+    color: #000 !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 保持用户管理模块的角色列颜色不变 */
+#panel-user .data-table td:nth-child(3) {
+    color: #333 !important;
+}
+
+/* 用户名/操作人字体颜色设为黑色 */
+#panel-user .data-table td:nth-child(2),
+#panel-log .data-table td:nth-child(2),
+#panel-message .data-table td:nth-child(2) {
+    color: #333 !important;
+}
+
+/* 操作列按钮样式 */
+.glass-theme .data-table .edit-btn {
+    background: var(--theme-color);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.glass-theme .data-table .del-btn {
+    background: #ff4d4f;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .glass-theme .add-btn {

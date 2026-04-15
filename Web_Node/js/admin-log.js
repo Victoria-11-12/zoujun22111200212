@@ -11,9 +11,9 @@ window.loadLogList = function() {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${new Date(log.create_time).toLocaleString()}</td>
-                        <td><b style="color:#1890ff">${log.username}</b></td>
+                        <td><span class="badge user">${log.username}</span></td>
                         <td>${log.action}</td>
-                        <td><code style="background:#f5f5f5;padding:2px 5px;border-radius:3px">${log.ip}</code></td>
+                        <td><code style="padding:2px 5px;border-radius:3px">${log.ip}</code></td>
                     `;
                     tbody.appendChild(tr);
                 });

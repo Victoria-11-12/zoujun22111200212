@@ -11,7 +11,7 @@ window.loadMessageList = function() {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${msg.id}</td>
-                        <td>${msg.username}</td>
+                        <td><span class="badge user">${msg.username}</span></td>
                         <td>${msg.message}</td>
                         <td>${new Date(msg.mes_time).toLocaleString()}</td>
                         <td>

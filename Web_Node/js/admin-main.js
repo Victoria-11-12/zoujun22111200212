@@ -2,7 +2,7 @@
 
 const menuItems = document.querySelectorAll('.menu-item');
 const panels = document.querySelectorAll('.panel');
-const currentTitle = document.getElementById('currentTitle');
+const currentTitle = document.getElementById('currentTitle') || { innerText: '', textContent: '' };
 
 // 动态设置管理员名称
 (function() {
@@ -30,12 +30,8 @@ function switchPanel(targetId) {
         mainContent.classList.add('panel-message-active');
     }
     
-    // AI 助手模块不显示标题
-    if (targetId !== 'panel-ai') {
-        currentTitle.innerText = document.querySelector(`[data-target="${targetId}"]`).innerText;
-    } else {
-        currentTitle.innerText = '';
-    }
+    // 所有模块都不显示标题
+    currentTitle.innerText = '';
 
     if (targetId === 'panel-user') {
         loadUserList();

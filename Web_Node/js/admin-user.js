@@ -11,7 +11,7 @@ window.loadUserList = function() {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${user.id}</td>
-                        <td>${user.username}</td>
+                        <td><span class="badge user">${user.username}</span></td>
                         <td data-role="${user.role}"><span class="badge ${user.role}">${user.role}</span></td>
                         <td>${new Date(user.create_time).toLocaleString()}</td>
                         <td>
