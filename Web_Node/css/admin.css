@@ -4,17 +4,25 @@ body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #
 .admin-container { display: flex; height: 100vh; }
 
 /* 侧边栏样式 */
-.sidebar { width: 240px; background: #001529; color: white; display: flex; flex-direction: column; }
+.sidebar { 
+    width: 240px; background: #fff; color: black; display: flex; flex-direction: column; 
+    position: fixed; left: -240px; top: 0; height: 100vh; z-index: 1000;
+    transition: left 0.3s ease;
+}
+ 
+.sidebar-trigger {
+    position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 999;
+}
 .admin-info { padding: 40px 20px; text-align: center; border-bottom: 1px solid #1f2d3d; }
 .avatar { width: 60px; 
     background:url(../img/touxiang.png) ;
     background-size: cover;
     height: 60px; border-radius: 50%; margin-bottom: 10px; border: 2px solid #1890ff; }
 
-.menu { flex: 1; padding: 20px 0; }
+.menu { flex: 1; padding: 20px 0; background-image: url('../img/luka5.png'); background-size: cover; background-position: center; }
 .menu-item { 
     width: 100%; padding: 15px 25px; border: none; background: none; 
-    color: #a6adb4; text-align: left; cursor: pointer; font-size: 14px; transition: 0.3s;
+    color: black; text-align: left; cursor: pointer; font-size: 14px; transition: 0.3s;
 }
 .menu-item:hover { color: white; background: #1890ff; }
 .menu-item.active { color: white; background: #1890ff; }
@@ -34,6 +42,8 @@ body { font-family: "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
 }
 
 /* 面板激活时显示对应背景 */
@@ -628,6 +638,19 @@ input[type="text"] { padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px
 #panel-user { --theme-color: #00f6ff; --theme-bg: rgba(0, 246, 255, 0.15); }
 #panel-log { --theme-color: #ff69b4; --theme-bg: rgba(255, 105, 180, 0.25); }
 #panel-message { --theme-color: #32CD32; --theme-bg: rgba(50, 205, 50, 0.25); }
+
+.panel-title {
+    color: var(--theme-color);
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 0 15px 0;
+    text-shadow: 0 0 10px var(--theme-color);
+}
+
+#panel-message .panel-title {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(50, 205, 50, 0.8);
+}
 
 /* --- 2. 通用透明皮肤 (Glassmorphism) --- */
 .panel.glass-theme {

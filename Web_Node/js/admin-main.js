@@ -66,4 +66,11 @@ document.getElementById('logoutBtn').onclick = function() {
     window.location.href = 'login.html';
 };
 
+document.querySelector('.sidebar-trigger').addEventListener('mouseenter', function() {
+    document.querySelector('.sidebar').style.left = '0';
+});
+document.querySelector('.sidebar').addEventListener('mouseleave', function() {
+    this.style.left = '-240px';
+});
+
 ensureMovieData(() => {});

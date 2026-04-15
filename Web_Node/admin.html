@@ -22,6 +22,7 @@
 </head>
 <body>
     <div class="admin-container">
+        <div class="sidebar-trigger"></div>
         <aside class="sidebar">
             <div class="admin-info">
                 <img class="avatar">
@@ -42,6 +43,7 @@
 
             <!-- 用户管理面板 -->
             <section class="panel active glass-theme" id="panel-user">
+                <h2 class="panel-title">用户管理</h2>
                 <div class="tool-bar">
                     <button class="add-btn">+ 新增用户</button>
                     <input type="text" placeholder="搜索用户名..." id="userSearch">
@@ -56,6 +58,7 @@
 
             <!-- 操作日志面板 -->
             <section class="panel glass-theme" id="panel-log">
+                <h2 class="panel-title">操作日志</h2>
                 <table class="data-table">
                     <thead>
                         <tr><th>时间</th><th>操作人</th><th>行为</th><th>IP地址</th></tr>
@@ -223,6 +226,7 @@
 
 <!-- 用户留言面板 -->
 <section class="panel glass-theme" id="panel-message">
+    <h2 class="panel-title">用户留言</h2>
     <div class="tool-bar">
         <button class="add-btn" id="refreshMessages">🔄 刷新留言</button>
         <input type="text" placeholder="搜索留言内容或用户名..." id="messageSearch">
