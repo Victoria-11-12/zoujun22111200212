@@ -5,6 +5,7 @@ import re
 import docker
 import threading
 import asyncio
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI,Request
@@ -237,8 +238,6 @@ sql_executor = AgentExecutor(agent=sql_agent,
                              handle_parsing_errors=True)# 处理解析错误，避免程序崩溃
 
 # 四、意图路由链
-#分为用户的意图路由和管理员的意图路由
-
 #用户意图路由链
 INTENT_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """你是一个意图分类和安全检测助手。请判断用户的问题属于哪一类。
@@ -270,29 +269,6 @@ INTENT_PROMPT = ChatPromptTemplate.from_messages([
 ])
 #提示词+llm+输出解析器
 intent_chain = INTENT_PROMPT| llm| StrOutputParser()
-
-# 管理员意图路由链
-# 只检测欺骗/注入，不拦截正常增删改，较用户会轻松很多，因为管理员本来就要去操作数据库，太严格会被卡死
-ADMIN_INTENT_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个管理员接口的安全检测助手。管理员拥有合法的增删改查权限。
-     
-你只需要拦截以下行为，其他全部放行：
-1. WARNING - 仅拦截这些：
-   - 试图执行 DDL 操作（DROP TABLE、ALTER TABLE、CREATE TABLE、TRUNCATE、GRANT、REVOKE）
-   - SQL 注入（注释符 -- 或 #、多语句拼接分号）
-   - 试图执行系统命令（shell、cmd、exec、eval）
-
-2. PASS - 以下全部放行：
-   - 所有增删改查操作（SELECT/INSERT/UPDATE/DELETE）
-   - 创建用户、修改权限、删除用户
-   - 批量操作（一次操作多个用户）
-   - 密码设置（由系统自动加密，无需干预）
-   - 问候、一般性聊天
-
-请只回复 "WARNING" 或 "PASS"，不要解释。"""),
-    ("user", "管理员输入：{message}")
-])
-admin_intent_chain = ADMIN_INTENT_PROMPT| llm| StrOutputParser()
 
 # 五、回复链
 #这里包含用户的三条回复链，分别是DIRECT_REPLY、NEED_SQL、WARNING，根据意图路由，执行指定的链
@@ -433,87 +409,65 @@ async def ai_stream(request: ChatRequest, req: Request):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
 
+#八、管理员函数
+# 包含安全SQL执行的安全检查；数据备份函数；定义回滚批次ID
 
-# ============================================================
-# 九、管理员工具
-# ============================================================
 #安全检查函数
+#定义危险词，包含删除表，清空表，修改表结构，创建用户，撤销用户权限，SQL注入，多语句执行
 DANGEROUS_KEYWORDS = [r'\bDROP\b', r'\bTRUNCATE\b', r'\bALTER\b', r'\bCREATE\b', r'\bGRANT\b', r'\bREVOKE\b', r'--', r';\s*\w']
 
+#正则检查函数，检查SQL语句是否包含危险词
 def check_sql_safety(sql: str) -> tuple[bool, str]:
+
+    #转大写，去掉首尾空格
     sql_upper = sql.upper().strip()
+    #遍历正则匹配，包含危险词直接返回
     for pattern in DANGEROUS_KEYWORDS:
         if re.search(pattern, sql_upper):
             return False, f"包含禁止操作: {pattern}"
-    # UPDATE 字段保护（不允许修改 id 和 created_at）
-    if sql_upper.startswith('UPDATE'):
-        set_match = re.search(r'SET\s+(.*?)\s+(WHERE|$)', sql_upper, re.DOTALL | re.IGNORECASE)
-        if set_match:
-            fields_str = set_match.group(1)
-            for field_part in fields_str.split(','):
-                field = field_part.strip().split('=')[0].strip().lower()
-                if field in ('id', 'created_at'):
-                    return False, f"不允许修改字段: {field}"
+        
     return True, "通过"
 
-#回滚备份函数
-def backup_before_modify(table_name: str, action: str, where_clause: str, operator: str = ""):
-    """DELETE/UPDATE 执行前备份受影响的数据"""
+# 数据备份函数
+# 数据操作备份函数，将操作写入日志表中，参数为 表名、操作类型、数据列表
+def backup_data(table_name: str, action: str, data: list):
+    global _current_admin_name
     try:
+        #链接数据库
         conn = pymysql.connect(
             host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
         )
-        with conn.cursor() as cursor:
-            cursor.execute(f"SELECT * FROM {table_name} WHERE {where_clause}")
-            columns = [desc[0] for desc in cursor.description]
-            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-            if not rows:
-                return
-            cursor.execute(
-                "INSERT INTO rollback_logs (table_name, action, affected_data, operator, batch_id) VALUES (%s,%s,%s,%s,%s)",
-                (table_name, action, json.dumps(rows, ensure_ascii=False, default=str), operator, _current_batch_id)
-            )
-            conn.commit()
-            print(f"[回滚备份] {action} {table_name}: 备份了 {len(rows)} 条数据")
-    except Exception as e:
-        print(f"[回滚备份失败] {e}")
-    finally:
-        conn.close()
-
-def backup_insert(table_name: str, inserted_data: dict, operator: str = ""):
-    """INSERT 执行后备份新插入的数据（用于回滚时删除）"""
-    try:
-        conn = pymysql.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
-        )
+        #执行SQL语句，将操作记录写入回滚日志表
         with conn.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO rollback_logs (table_name, action, affected_data, operator, batch_id) VALUES (%s,%s,%s,%s,%s)",
-                (table_name, "INSERT", json.dumps([inserted_data], ensure_ascii=False, default=str), operator, _current_batch_id)
+                "INSERT INTO rollback_logs (table_name, action, affected_data, username, batch_id) VALUES (%s,%s,%s,%s,%s)",
+                (table_name, action, json.dumps(data, ensure_ascii=False, default=str), _current_admin_name, _current_batch_id)
             )
+            #- ensure_ascii=False - 允许中文，不转义成 \uXXXX - 
+            # default=str - 遇到无法序列化的类型（如日期），转成字符串
             conn.commit()
-            print(f"[回滚备份] INSERT {table_name}: 备份了 1 条数据")
+            print(f"[回滚备份] {action} {table_name}: 备份了 {len(data)} 条数据")
     except Exception as e:
         print(f"[回滚备份失败] {e}")
     finally:
         conn.close()
 
 # 当前批次ID，用于复合指令回滚
-import uuid
 _current_batch_id = str(uuid.uuid4())[:8]
+# 当前管理员名称，用于备份记录操作者
+_current_admin_name = ""
 
-@tool
-def start_batch() -> str:
-    """开始一个操作批次。在执行复合操作（多条增删改）之前调用，之后可以用 rollback_batch 一次性回滚整个批次。无需参数。"""
-    global _current_batch_id
-    _current_batch_id = str(uuid.uuid4())[:8]
-    return f"已创建新批次 {_current_batch_id}，后续操作将归入此批次。"
+# 九、管理员工具
+# 四个工具：创建用户，主要SQL操作，创建操作批次，回滚批次
+# 实际上主要SQL操作这个工具是可以执行创建用户的操作的，但是在编写密码的时候，他编写的密码会明文存储，而我们需要哈希加密
+# 同时在创建用户时也需要先检查数据库中有没有用户名重复，所以单独列了一个工具，代码更整洁
 
+#创建用户
 @tool
 def create_user(username: str, password: str = "123456", role: str = "user") -> str:
     """创建新用户，密码会自动加密。参数：username(用户名), password(密码,默认123456), role(角色,默认user)"""
+    #链接数据库
     conn = pymysql.connect(
         host=os.getenv('DB_HOST'),
         user=os.getenv('DB_USER'),
@@ -521,25 +475,34 @@ def create_user(username: str, password: str = "123456", role: str = "user") -> 
         database=os.getenv('DB_NAME')
     )
     try:
+        #哈希加密密码
         hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        #检查用户名是否存在，不存在再创建用户
         with conn.cursor() as cursor:
             cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
             if cursor.fetchone():
                 return f"用户 {username} 已存在"
+            #创建用户
             cursor.execute(
                 "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
                 (username, hashed, role)
             )
             conn.commit()
             # 备份新插入的用户（回滚时需要删除）
+
+            #查询新插入的用户数据
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            #获取列名
             columns = [desc[0] for desc in cursor.description]
+            #将查询结果转换为字典
             row = dict(zip(columns, cursor.fetchone()))
-            backup_insert("users", row)
+            #调用函数备份数据
+            backup_data("users", "INSERT", [row])
             return f"用户 {username} 创建成功，角色：{role}。（已自动备份，可通过回滚功能恢复）"
     finally:
         conn.close()
 
+#主要SQL操作
 @tool
 def safe_execute_sql(query: str) -> str:
     """执行 SQL 操作。可以查询(SELECT)、修改(UPDATE)、删除(DELETE)数据。
@@ -550,124 +513,107 @@ def safe_execute_sql(query: str) -> str:
 - 删除：DELETE FROM users WHERE username='test3'
     
 参数：query(要执行的SQL语句)"""
+
+    #调用正则检查函数，检查SQL语句是否包含危险词
     is_safe, reason = check_sql_safety(query)
     if not is_safe:
         return f"🚫 安全拦截：{reason}，该操作已被记录。"
     sql_upper = query.upper().strip()
 
-    # DELETE/UPDATE 执行前自动备份
-    if sql_upper.startswith('DELETE') or sql_upper.startswith('UPDATE'):
-        table_match = re.search(r'FROM\s+(\w+)|UPDATE\s+(\w+)', sql_upper)
-        where_match = re.search(r'WHERE\s+(.+)$', sql_upper, re.IGNORECASE)
-        if table_match and where_match:
-            table_name = [t for t in table_match.groups() if t][0]
-            where_clause = where_match.group(1).strip()
-            action = "DELETE" if sql_upper.startswith('DELETE') else "UPDATE"
-            backup_before_modify(table_name, action, where_clause)
-
     try:
+        #链接数据库
         conn = pymysql.connect(
             host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
         )
+        #创建游标
         with conn.cursor() as cursor:
+            # DELETE/UPDATE 执行前备份数据
+            if sql_upper.startswith('DELETE') or sql_upper.startswith('UPDATE'):
+                #正则FROM匹配DELETE表名，UPDATE匹配UPDATE表名，这边只是匹配对象，还没有提取
+                table_match = re.search(r'FROM\s+(\w+)|UPDATE\s+(\w+)', sql_upper)
+                #正则匹配WHERE之后的内容
+                where_match = re.search(r'WHERE\s+(.+)$', sql_upper)
+
+                #表名和条件都匹配成功才备份数据
+                if table_match and where_match:
+
+                    #列表推导式过滤空值，取第一个非空值作为表名
+                    table_name = [t for t in table_match.groups() if t][0]
+                    #where只有一个捕获组，不需要过滤空值，直接取第一个捕获组内容
+                    where_clause = where_match.group(1).strip()
+                    #根据操作类型判断备份操作是DELETE还是UPDATE
+                    action = "DELETE" if sql_upper.startswith('DELETE') else "UPDATE"
+
+                    # 查询要备份的数据
+                    cursor.execute(f"SELECT * FROM {table_name} WHERE {where_clause}")
+                    #列表推导式拿到返回结果的列名
+                    columns = [desc[0] for desc in cursor.description]
+                    #cursor.fetchall()返回所有结果行,
+                    #zip(columns, row)将列名和行数据对应起来，转换为字典
+                    rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                    if rows:
+                        backup_data(table_name, action, rows)
+            
+            #执行SQL语句
             cursor.execute(query)
+            #判断是否为查询操作
             if query.upper().strip().startswith('SELECT'):
-                results = cursor.fetchall()
-                columns = [desc[0] for desc in cursor.description]
-                rows = [dict(zip(columns, row)) for row in results[:20]]
+                results = cursor.fetchall() #获取所有结果
+                columns = [desc[0] for desc in cursor.description] #获取列名
+                rows = [dict(zip(columns, row)) for row in results[:15]] #获取前15条数据
                 if not rows:
                     return "查询结果为空"
                 return f"查询到 {len(rows)} 条数据:\n" + "\n".join(" | ".join(str(v) for v in r.values()) for r in rows)
             else:
-                conn.commit()
+                conn.commit() #提交事务
                 return f"操作成功，影响 {cursor.rowcount} 行。（已自动备份，可通过回滚功能恢复）"
     except Exception as e:
         return f"SQL 执行错误: {str(e)}"
     finally:
         conn.close()
 
+#创建批次
 @tool
-def rollback_last() -> str:
-    """撤销最近一次操作（DELETE恢复数据、UPDATE还原旧值、INSERT删除新增数据）。无需参数。"""
-    try:
-        conn = pymysql.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
-        )
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT * FROM rollback_logs ORDER BY id DESC LIMIT 1")
-            record = cursor.fetchone()
-            if not record:
-                return "没有可回滚的操作记录"
+def start_batch() -> str:
+    """开始一个操作批次。在执行数据库增删改操作之前调用，之后可以用 rollback_batch 一次性回滚整个批次。无需参数。"""
+    global _current_batch_id
+    _current_batch_id = str(uuid.uuid4())[:8]
+    #生成批次代码，global修改全局变量，让后续备份操作都共享这个批次号
+    return f"已创建新批次 {_current_batch_id}，后续操作将归入此批次。"
 
-            log_id = record[0]
-            table_name = record[1]
-            action = record[2]
-            affected_data = record[3]
-            rows = json.loads(affected_data)
-
-            if action == "DELETE":
-                columns = list(rows[0].keys())
-                placeholders = ",".join(["%s"] * len(columns))
-                col_str = ",".join(columns)
-                for row in rows:
-                    values = [row[c] for c in columns]
-                    cursor.execute(f"INSERT INTO {table_name} ({col_str}) VALUES ({placeholders})", values)
-                conn.commit()
-                result = f"回滚成功：已恢复 {len(rows)} 条数据到 {table_name} 表（DELETE 回滚）"
-
-            elif action == "UPDATE":
-                for row in rows:
-                    if 'id' in row:
-                        set_parts = [f"{k}=%s" for k in row.keys() if k != 'id']
-                        values = [row[k] for k in row.keys() if k != 'id']
-                        values.append(row['id'])
-                        cursor.execute(f"UPDATE {table_name} SET {','.join(set_parts)} WHERE id=%s", values)
-                conn.commit()
-                result = f"回滚成功：已恢复 {len(rows)} 条数据到 {table_name} 表（UPDATE 回滚）"
-
-            elif action == "INSERT":
-                for row in rows:
-                    if 'id' in row:
-                        cursor.execute(f"DELETE FROM {table_name} WHERE id=%s", (row['id'],))
-                    elif 'username' in row:
-                        cursor.execute(f"DELETE FROM {table_name} WHERE username=%s", (row['username'],))
-                conn.commit()
-                result = f"回滚成功：已删除 {len(rows)} 条新增数据（INSERT 回滚）"
-
-            else:
-                result = f"不支持回滚的操作类型: {action}"
-
-            cursor.execute("DELETE FROM rollback_logs WHERE id=%s", (log_id,))
-            conn.commit()
-            return result
-    except Exception as e:
-        return f"回滚失败: {str(e)}"
-    finally:
-        conn.close()
-
+#回滚批次
 @tool
 def rollback_batch() -> str:
-    """撤销最近一个批次的所有操作。复合指令（如同时增删改多个用户）后使用此工具一次性回滚。无需参数。"""
+    """撤销一个批次的指定或所有操作。数据库增删改操作后使用此工可以一次性回滚。无需参数。"""
     try:
+        #链接数据库
         conn = pymysql.connect(
             host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
         )
+        #创建游标
         with conn.cursor() as cursor:
             # 获取最近的批次ID
-            cursor.execute("SELECT DISTINCT batch_id FROM rollback_logs ORDER BY id DESC LIMIT 1")
+            # 这里只能取最近的一个批次id，跨批次回滚会报错，顺序错乱
+            # 去掉DISTINCT，因为LIMIT 1已经只返回一条记录，避免与ORDER BY不兼容的错误
+            cursor.execute("SELECT batch_id FROM rollback_logs ORDER BY id DESC LIMIT 1")
             batch_row = cursor.fetchone()
             if not batch_row:
                 return "没有可回滚的操作记录"
+            #取第0个元素，返回的结果大概是（'1314sada',）的元组
             batch_id = batch_row[0]
 
             # 获取该批次所有记录，按 id 倒序（后执行的先回滚）
+            #ORDER BY id DESC，倒序排列，后执行的操作先回滚，很重要，否则会先回滚先执行的操作，导致数据不一致
+            #获取的是一个批次的记录，不是整个表的记录，不依次操作一条记录会导致数据错乱
             cursor.execute("SELECT * FROM rollback_logs WHERE batch_id=%s ORDER BY id DESC", (batch_id,))
             records = cursor.fetchall()
 
+            #计算回滚数据的条数
             total_restored = 0
+
+            #取值
             for record in records:
                 log_id = record[0]
                 table_name = record[1]
@@ -675,24 +621,41 @@ def rollback_batch() -> str:
                 affected_data = record[3]
                 rows = json.loads(affected_data)
 
+                #下面分三种情况处理
+                #删除操作重新插入
                 if action == "DELETE":
-                    columns = list(rows[0].keys())
-                    placeholders = ",".join(["%s"] * len(columns))
-                    col_str = ",".join(columns)
+                    columns = list(rows[0].keys()) #获取列名
+                    placeholders = ",".join(["%s"] * len(columns)) #生成占位符，有几个列名生成几个
+                    col_str = ",".join(columns) # 生成列名字符串
                     for row in rows:
-                        values = [row[c] for c in columns]
+                        values = [row[c] for c in columns] #按列名顺序取值
                         cursor.execute(f"INSERT INTO {table_name} ({col_str}) VALUES ({placeholders})", values)
                     total_restored += len(rows)
+                    #删除示例：
+                    #假设数据rows = [
+                    #     {'id': 3, 'name': '张三', 'age': 28},
+                    #     {'id': 4, 'name': '李四', 'age': 32}
+                    # ]
+                    # columuns = ['id', 'name', 'age']
+                    # placeholders = '%s, %s, %s'
+                    # col_str = 'id, name, age'
+                    # for row in rows:
+                    #     values 会依次=[3,'张三', 28]
+                    #     SQL语句传参并执行
+                    # 计算操作数量
 
+                #修改操作，将除了id外的所有值恢复旧值
+                #id是主键，用户可能有重名，但id不会重复
                 elif action == "UPDATE":
                     for row in rows:
                         if 'id' in row:
-                            set_parts = [f"{k}=%s" for k in row.keys() if k != 'id']
-                            values = [row[k] for k in row.keys() if k != 'id']
-                            values.append(row['id'])
-                            cursor.execute(f"UPDATE {table_name} SET {','.join(set_parts)} WHERE id=%s", values)
+                            set_parts = [f"{k}=%s" for k in row.keys() if k != 'id'] # 生成占位符，类似['name=%s', 'age=%s']
+                            values = [row[k] for k in row.keys() if k != 'id'] # 从备份中取旧值，类似['张三', 32]
+                            values.append(row['id']) # 加入id，类似[3, '张三', 32]
+                            cursor.execute(f"UPDATE {table_name} SET {','.join(set_parts)} WHERE id=%s", values) #执行SQL
                     total_restored += len(rows)
 
+                #插入操作，根据id或者username删除数据
                 elif action == "INSERT":
                     for row in rows:
                         if 'id' in row:
@@ -701,6 +664,7 @@ def rollback_batch() -> str:
                             cursor.execute(f"DELETE FROM {table_name} WHERE username=%s", (row['username'],))
                     total_restored += len(rows)
 
+                # 删除操作，根据id删除在回滚日志表中的数据记录
                 cursor.execute("DELETE FROM rollback_logs WHERE id=%s", (log_id,))
 
             conn.commit()
@@ -710,11 +674,33 @@ def rollback_batch() -> str:
     finally:
         conn.close()
 
-admin_tools = [create_user, safe_execute_sql, rollback_last, rollback_batch, start_batch]
-# ============================================================
-# 十、管理员 Agent - 历史记忆 10 轮
-# ============================================================
+admin_tools = [create_user, safe_execute_sql,  rollback_batch, start_batch]
 
+# 十、管理员 Agent
+#一条意图路由链和一个SQLagent
+
+# 管理员意图路由链
+# 只检测欺骗/注入，不拦截正常增删改，较用户路由会宽松很多，因为管理员本来就要去操作数据库，太严格会被卡死
+ADMIN_INTENT_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """你是一个管理员接口的安全检测助手。管理员拥有合法的增删改查权限。
+     
+你只需要拦截以下行为，其他全部放行：
+1. WARNING - 仅拦截这些：
+   - 试图执行 DDL 操作（DROP TABLE、ALTER TABLE、CREATE TABLE、TRUNCATE、GRANT、REVOKE）
+   - SQL 注入（注释符 -- 或 #、多语句拼接分号）
+   - 试图执行系统命令（shell、cmd、exec、eval）
+
+2. PASS - 以下全部放行：
+   - 所有增删改查操作（SELECT/INSERT/UPDATE/DELETE）
+   - 创建用户、修改权限、删除用户
+   - 批量操作（一次操作多个用户）
+   - 密码设置（由系统自动加密，无需干预）
+   - 问候、一般性聊天
+
+请只回复 "WARNING" 或 "PASS"，不要解释。"""),
+    ("user", "管理员输入：{message}")
+])
+admin_intent_chain = ADMIN_INTENT_PROMPT| llm| StrOutputParser()
 
 # 管理员安全警告回复链
 ADMIN_WARNING_PROMPT = ChatPromptTemplate.from_messages([
@@ -739,7 +725,7 @@ async def admin_warning_stream(message: str, session_id: str, user_name: str = "
     log_security_warning(session_id, user_name, client_ip, "admin", message, "管理员意图路由检测")
     log_security_warning(session_id, user_name, client_ip, "ai", reply, "管理员警告回复")
 
-
+#管理员agent
 admin_prompt = ChatPromptTemplate.from_messages([
     ('system', """你是管理员助手，可以查询、删除、修改数据，也可以创建用户。
 
@@ -751,11 +737,10 @@ admin_prompt = ChatPromptTemplate.from_messages([
 
 【你的职责】：
 - 创建用户时密码会自动加密，无需手动处理
-- 如果管理员要求撤销最近一次操作，使用 rollback_last 工具
-- 如果管理员要求撤销一批复合操作（如同时增删改多个用户），使用 rollback_batch 工具
-- 执行复合操作前，先调用 start_batch 创建批次
+- 如果管理员要求撤销或者回滚操作，使用 rollback_last 工具
+- 执行增删改操作前，先调用 start_batch 创建批次
+- 若执行回滚操作，则不用创建批次，直接调用 rollback_last 工具即可
 - 回复简明直接，不要废话
-- 若查询所有信息，需要输出查询到最新十条数据
 - 回顾之前的对话内容，保持上下文连贯"""),
     MessagesPlaceholder(variable_name="history"),
     ('user', '{input}'),
@@ -763,19 +748,23 @@ admin_prompt = ChatPromptTemplate.from_messages([
 ])
 
 admin_agent = create_tool_calling_agent(llm, admin_tools, admin_prompt)
-admin_executor = AgentExecutor(agent=admin_agent, tools=admin_tools, verbose=True)
+admin_executor = AgentExecutor(agent=admin_agent, 
+                               tools=admin_tools, 
+                               verbose=True,
+                               max_iterations=10,  #管理员操作更复杂，需要更多轮次，一般十轮足够了
+                               handle_parsing_errors=True)
 
 
-# ============================================================
-# 十一、管理员 AI 接口 - 历史记忆 10 轮
-# ============================================================
+# 十一、管理员 AI 路由
 
 @app.post("/api/admin/ai/stream")
 async def admin_ai_stream(request: ChatRequest, req: Request):
     """AI 流式对话接口（管理员）"""
+    global _current_admin_name
+    _current_admin_name = request.username  # 设置当前管理员名称，用于备份记录
     message = request.message
     session_id = request.sessionId
-    client_ip = request.clientIp if request.clientIp else (req.client.host if req.client else "unknown")
+    client_ip = request.clientIp 
     history = get_history(session_id)[-MAX_HISTORY * 2:]  # 保留最近 10 轮
 
     async def generate():
@@ -790,11 +779,14 @@ async def admin_ai_stream(request: ChatRequest, req: Request):
                     yield chunk
                 return
 
-            log_admin_chat(session_id, "user", message, user_name=request.username)
+            log_admin_chat(session_id, "user", message, user_name=request.username) # 记录用户输入
             result = await admin_executor.ainvoke({"input": message, "history": history})
             agent_reply = result.get('output', '')
 
             # 流式输出管理员回复
+            # 这边管理员是一个分块发送的假流式，agentexecutor是同步顺序执行的，会在处理完所有操作后返回结果
+            # 用户模块的真流式是因为在agentexecutor之后又套了一个组织自然语言的llm
+            # 这是因为用户端需要语言包装，但是管理员端更需要数据库中直白的数据
             for i in range(0, len(agent_reply), 10):
                 chunk = agent_reply[i:i + 10]
                 yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
