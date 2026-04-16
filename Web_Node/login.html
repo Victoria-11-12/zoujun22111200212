@@ -11,6 +11,13 @@
             <source src="video/movie3.mp4" type="video/mp4">
         </video>
     </div>
+    
+    <div class="transition-video" id="transitionVideo">
+        <video id="transitionPlayer">
+            <source src="video/sola.mp4" type="video/mp4">
+        </video>
+    </div>
+    
     <h1>基于echarts的电影票房数据分析与可视化系统</h1>
     <hr>
     <div class="login-container">
@@ -88,8 +95,15 @@
                         alert('权限不足：您没有分析师权限，无法进入数据分析平台！');
                         return;
                     }
-                    alert('分析师身份确认，正在进入数据分析平台...');
-                    window.location.href = 'analyst.html';
+                    // 播放转场视频
+                    const transitionVideo = document.getElementById('transitionVideo');
+                    const transitionPlayer = document.getElementById('transitionPlayer');
+                    transitionVideo.classList.add('active');
+                    transitionPlayer.play();
+                    transitionPlayer.onended = function() {
+                        window.location.href = 'analyst.html';
+                    };
+                    return;
                 } else {
                     // 普通用户登录
                     alert('登录成功，欢迎回来！');

@@ -21,6 +21,27 @@
     object-fit: cover;
 }
 
+/* 转场视频 */
+.transition-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: none;
+}
+
+.transition-video.active {
+    display: block;
+}
+
+.transition-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* 基础背景设置 */
 body {
     background: none;
