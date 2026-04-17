@@ -1262,10 +1262,13 @@ async def chart_generate(request: ChartRequest):
     )
 
 
-# ============================================================
-# 十二、LLM 评估模块（分析师功能）
-# ============================================================
 
+### 评估Agent
+
+
+###一、基本配置
+
+##这两个模型用于结构化输出
 # 对话评估结果模型
 class ResponseEvalResult(BaseModel):
     score: int = Field(description="总分1-5")
@@ -1281,8 +1284,8 @@ class CodeEvalResult(BaseModel):
     verdict: str = Field(description="pass/review/fail")
 
 
-# 评估模块专用 LLM（使用 DeepSeek）
-eval_llm = ChatDeepSeek(
+# 评估模块专用 LLM
+eval_llm = ChatOpenAI(
     model=os.getenv('EVAL_MODEL_NAME'),
     api_key=os.getenv('EVAL_API_KEY'),
     base_url=os.getenv('API_BASE'),
@@ -1296,10 +1299,12 @@ DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST')
 DB_URI_ANALYST = f"mysql+pymysql://{DB_USER_ANALYST}:{DB_PASS_ANALYST}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 
 # 评估进度全局变量
-eval_progress = {"status": "idle", "total": 0, "completed": 0}
-eval_lock = threading.Lock()
+eval_progress = {"status": "idle", "total": 0, "completed": 0} #全局字典，记录当前评估状态、总任务数、已完成任务数
+eval_lock = threading.Lock() #线程锁，防止多线程同时修改进度数据（因为评估在后台线程运行，API 在主线程读取）
 
-# 评估 Prompts（用于结构化输出）
+#二、评估链配置
+
+# 文本类回复评估链
 response_eval_prompt= ChatPromptTemplate.from_template("""你是一个 LLM 输出质量评估员。请对以下对话记录进行质量评估。
 
 用户输入：{user_content}
@@ -1336,6 +1341,12 @@ verdict 规则：
     "verdict": "<pass/review/fail>"
 }}""")
 
+response_eval_chain = response_eval_prompt | eval_llm.with_structured_output(
+    ResponseEvalResult,
+    method="json_mode" # 确保输出 JSON 格式
+)
+
+# 代码类评估链
 code_eval_prompt = ChatPromptTemplate.from_template("""你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
 
 用户需求：{question}
@@ -1375,18 +1386,13 @@ verdict 规则：
     "verdict": "<pass/review/fail>"
 }}""")
 
-
-response_eval_chain = response_eval_prompt | eval_llm.with_structured_output(
-    ResponseEvalResult,
-    method="json_mode"
-)
-
 code_eval_chain = code_eval_prompt | eval_llm.with_structured_output(
     CodeEvalResult,
     method="json_mode"
 )
 
-# 分析师数据库操作函数（使用 analyst 用户连接）
+#三、数据库配置
+#  analyst 用户连接数据库
 def get_analyst_db_connection():
     """获取分析师数据库连接（只读权限）"""
     return pymysql.connect(
@@ -1394,15 +1400,23 @@ def get_analyst_db_connection():
         user=DB_USER_ANALYST,
         password=DB_PASS_ANALYST,
         database=os.getenv('DB_NAME'),
-        cursorclass=pymysql.cursors.DictCursor
+        cursorclass=pymysql.cursors.DictCursor # 确保返回字典格式
     )
 
-def save_eval_result(source_table: str, source_id: int, eval_type: str,
-                     score: int, dimensions: str, issues: str, verdict: str,
-                     user_content: str = "", ai_content: str = "", created_at: str = ""):
+#写入数据库
+def save_eval_result(source_table: str,  # 来源表名，如 'chat_logs'、'rollback_logs' 等
+                     source_id: int,     # 来源记录ID，对应表中的主键
+                     eval_type: str,    # 评估类型，如 'response'、'chart'、'sql' 等
+                     score: int,        # 评估总分，范围1-5分
+                     dimensions: str,   # 维度评分，JSON格式，如 '{"相关性":5,"完整性":4}'
+                     issues: str,       # 问题描述，评估发现的具体问题
+                     verdict: str,      # 最终判定，如 'pass'、'review'、'fail'
+                     user_content: str = "",  # 用户输入内容，可选
+                     ai_content: str = "",    # AI回复内容，可选
+                     created_at: str = ""):   # 创建时间，可选，默认当前时间
     """保存评估结果到 eval_results 表"""
     try:
-        conn = get_analyst_db_connection()
+        conn = get_analyst_db_connection() # 链接数据库
         with conn.cursor() as cursor:
             # 如果没有传入 created_at，则使用当前时间
             if not created_at:
@@ -1429,129 +1443,175 @@ def save_eval_result(source_table: str, source_id: int, eval_type: str,
     finally:
         conn.close()
 
-# 评估执行函数（异步版本）
+
+# 四、评估执行函数
+# 异步可以执行三个并发任务
 async def evaluate_records_task_async(records: list, eval_type: str):
-    """异步执行评估任务"""
-    global eval_progress
-    with eval_lock:
-        eval_progress["status"] = "running"
-        eval_progress["total"] = len(records)
-        eval_progress["completed"] = 0
+    """异步执行评估任务
     
-    semaphore = asyncio.Semaphore(3)
+    Args:
+        records: 待评估的记录列表，每条记录包含用户对话或代码执行信息
+        eval_type: 评估类型，'response' 对话评估或 'code' 代码评估
+    """
+    global eval_progress
+    
+    # 初始化评估进度
+    with eval_lock:
+        eval_progress["status"] = "running"  # 设置状态为运行中
+        eval_progress["total"] = len(records)  # 记录总任务数
+        eval_progress["completed"] = 0  # 初始化已完成数为0
+    
+    # 创建信号量，限制并发数为10，我调用的deepseek模型，官方说是没有并发限制，但是可能会排队
+    semaphore = asyncio.Semaphore(10)
     
     async def eval_one(record):
-        async with semaphore:
+        """评估单条记录的内部函数"""
+        async with semaphore:  # 获取信号量，控制并发
             try:
-                if eval_type == "response":
-                    result = await response_eval_chain.ainvoke({
-                        "user_content": record.get("user_content", ""),
-                        "ai_response": record.get("ai_content", "")
+                # 根据评估类型调用不同的评估链
+                # 对话评估比较简单，直接调用链评估即可
+                if eval_type == "response":  # 如果是对话评估类型
+                    result = await response_eval_chain.ainvoke({  # 调用对话评估链
+                        "user_content": record.get("user_content", ""),  # 获取用户输入内容
+                        "ai_response": record.get("ai_content", "")  # 获取AI回复内容
                     })
-                elif eval_type == "code":
-                    exec_result = json.dumps({
-                        "success": record.get("is_success", False),
-                        "error": record.get("error_msg", "")
-                    }, ensure_ascii=False)
-                    result = await code_eval_chain.ainvoke({
-                        "question": record.get("question", ""),
-                        "code": record.get("generated_code", ""),
-                        "exec_result": exec_result
+
+                elif eval_type == "code":  # 如果是代码评估类型
+
+                    #代码评估要求较严格，后续迭代也是以代码为主，这里先获取执行结果和错误信息，并转为json一起传到链中
+                    exec_result = json.dumps({  # 将执行结果转换为JSON字符串
+                        "success": record.get("is_success", False),  # 获取执行是否成功
+                        "error": record.get("error_msg", "")  # 获取错误信息
+                    }, ensure_ascii=False)  # 确保支持中文
+
+                    result = await code_eval_chain.ainvoke({  # 调用代码评估链
+                        "question": record.get("question", ""),  # 获取原始问题
+                        "code": record.get("generated_code", ""),  # 获取生成的代码
+                        "exec_result": exec_result  # 传入执行结果
                     })
                 
-                save_eval_result(
-                    source_table=record.get("source_table", ""),
-                    source_id=record.get("id", 0),
-                    eval_type=eval_type,
-                    score=result.score,
-                    dimensions=json.dumps(result.dimensions, ensure_ascii=False),
-                    issues=result.issues,
-                    verdict=result.verdict,
-                    user_content=record.get("user_content", ""),
-                    ai_content=record.get("ai_content", ""),
-                    created_at=record.get("created_at", "")
+                # 保存成功的评估结果
+                save_eval_result(  # 调用保存评估结果函数
+                    source_table=record.get("source_table", ""),  # 来源表名
+                    source_id=record.get("id", 0),  # 来源记录ID
+                    eval_type=eval_type,  # 评估类型
+                    score=result.score,  # 评估分数
+                    dimensions=json.dumps(result.dimensions, ensure_ascii=False),  # 维度评分JSON
+                    issues=result.issues,  # 问题描述
+                    verdict=result.verdict,  # 最终判定
+                    user_content=record.get("user_content", ""),  # 用户输入内容
+                    ai_content=record.get("ai_content", ""),  # AI回复内容
+                    created_at=record.get("created_at", "")  # 创建时间
                 )
-            except Exception as e:
-                print(f"评估失败 (id={record.get('id')}): {e}")
-                save_eval_result(
-                    source_table=record.get("source_table", ""),
-                    source_id=record.get("id", 0),
-                    eval_type=eval_type,
-                    score=0,
-                    dimensions="{}",
-                    issues=f"评估失败: {str(e)}",
-                    verdict="fail",
-                    user_content=record.get("user_content", ""),
-                    ai_content=record.get("ai_content", ""),
-                    created_at=record.get("created_at", "")
+            except Exception as e:  # 捕获所有异常
+                # 评估失败时的处理
+                print(f"评估失败 (id={record.get('id')}): {e}")  # 打印失败日志
+                # 保存失败记录，标记为0分和fail状态
+                save_eval_result(  # 保存失败记录
+                    source_table=record.get("source_table", ""),  # 来源表名
+                    source_id=record.get("id", 0),  # 来源记录ID
+                    eval_type=eval_type,  # 评估类型
+                    score=0,  # 失败时分数为0
+                    dimensions="{}",  # 空维度评分
+                    issues=f"评估失败: {str(e)}",  # 记录失败原因
+                    verdict="fail",  # 标记为失败状态
+                    user_content=record.get("user_content", ""),  # 用户输入内容
+                    ai_content=record.get("ai_content", ""),  # AI回复内容
+                    created_at=record.get("created_at", "")  # 创建时间
                 )
             finally:
+                # 无论成功失败，都更新进度
                 with eval_lock:
                     eval_progress["completed"] += 1
     
+    # 并发执行所有评估任务
     await asyncio.gather(*[eval_one(r) for r in records])
     
+    # 所有任务完成后更新状态
     with eval_lock:
         eval_progress["status"] = "done"
 
-# ============================================================
-# 十三、分析师 API 路由
-# ============================================================
 
-# 请求模型
+#五、结构定义
+# 定义结构用于输出
+# 评估请求参数模型
 class EvaluateRequest(BaseModel):
+    # 数据表列表，默认包含所有日志表
     tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs", "chart_generation_logs", "security_warning_logs"])
+    # 起始日期筛选，用于过滤数据
     start_date: str = Field(default="")
+    # 结束日期筛选，用于过滤数据
     end_date: str = Field(default="")
 
+# 导出请求参数模型
 class ExportRequest(BaseModel):
+    # 最低评分筛选，默认值为4
     min_score: int = Field(default=4)
+    # 数据表列表，默认用户和管理员聊天日志表
     tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs"])
 
+#六、接口
+
 # 1. 触发质量评估
+# 评估耗时较长，这边后台单独开一个线程+异步执行，并配上线程锁
 @app.post("/api/analyst/evaluate")
 async def start_evaluation(request: EvaluateRequest):
     """启动质量评估任务"""
+    # 声明使用全局变量评估进度
     global eval_progress
     
+    # 检查是否有运行中的评估任务
     with eval_lock:
         if eval_progress["status"] == "running":
             return {"error": "已有评估任务正在运行"}
     
     try:
-        conn = get_analyst_db_connection()
-        all_records = []
+        conn = get_analyst_db_connection()        # 获取数据库连接
+        all_records = []        # 初始化记录列表
         
+        # 查询数据库记录
         with conn.cursor() as cursor:
-            date_filter = ""
-            params = []
+            date_filter = ""            # 初始化日期过滤条件为空
+            params = []            # 初始化查询参数列表
+
+            # 构建日期过滤条件
             if request.start_date and request.end_date:
                 date_filter = " AND DATE(created_at) BETWEEN %s AND %s"
                 params = [request.start_date, request.end_date]
             
+            # 遍历请求的表
             for table in request.tables:
+                # 处理对话类表
                 if table in ["user_chat_logs", "admin_chat_logs", "security_warning_logs"]:
-                    # 对话类表
+                    # 查询对话记录
                     cursor.execute(f"""
                         SELECT id, session_id, role, content, created_at, '{table}' as source_table
                         FROM {table}
                         WHERE 1=1 {date_filter}
                         ORDER BY id
                     """, params)
+                    # 获取所有查询记录
                     records = cursor.fetchall()
-                    # 按 session 分组，组合成对话对
+                    # 按会话分组记录
                     sessions = {}
                     for r in records:
+                        # 获取会话ID
                         sid = r["session_id"]
                         if sid not in sessions:
                             sessions[sid] = []
+                        # 将记录添加到对应会话
                         sessions[sid].append(r)
                     
+                    # 构建对话
                     for sid, session_records in sessions.items():
+                        # 遍历会话中的每条记录，获取索引和值
                         for i, r in enumerate(session_records):
+                            # 匹配AI回复和用户提问
                             if r["role"] == "ai" and i > 0:
+                                # 获取前一条记录作为用户消息，AI不能自发说话的，他的前一条一定是用户信息
                                 user_record = session_records[i-1]
                                 if user_record["role"] == "user":
+                                    # 添加对话对到记录列表
                                     all_records.append({
                                         "id": r["id"],
                                         "source_table": table,
@@ -1561,16 +1621,20 @@ async def start_evaluation(request: EvaluateRequest):
                                         "created_at": r["created_at"]
                                     })
                 
+                # 处理绘图代码表
                 elif table == "chart_generation_logs":
-                    # 绘图代码表
+                    # 查询图表生成记录
                     cursor.execute(f"""
                         SELECT id, question, sql_result, generated_code, is_success, error_msg, created_at, '{table}' as source_table
                         FROM {table}
                         WHERE 1=1 {date_filter}
                         ORDER BY id
                     """, params)
+                    # 获取所有查询记录
                     records = cursor.fetchall()
+                    # 构建代码评估记录
                     for r in records:
+                        # 添加代码评估记录
                         all_records.append({
                             "id": r["id"],
                             "source_table": table,
@@ -1585,40 +1649,51 @@ async def start_evaluation(request: EvaluateRequest):
                             "created_at": r["created_at"]
                         })
         
+        # 关闭数据库连接
         conn.close()
         
-        # # 只评估前5条数据
-        # all_records = all_records[:5]
-        
+        # 验证是否有记录
         if not all_records:
             return {"error": "没有找到符合条件的记录"}
         
-        # 准备评估任务数据
+        # eval_type只是为了方便分组，是一个临时标记，后续json并不需要，这里我们提取出来并删除
         eval_tasks = []
         for record in all_records:
+            # 提取评估类型
             eval_type = record.pop("eval_type")
+            # 将记录和类型组成元组
             eval_tasks.append((record, eval_type))
         
         # 按类型分组记录
         response_records = [r for r, t in eval_tasks if t == "response"]
         code_records = [r for r, t in eval_tasks if t == "code"]
         
+        # 更新评估进度状态
         with eval_lock:
             eval_progress["status"] = "running"
             eval_progress["total"] = len(all_records)
             eval_progress["completed"] = 0
-        
+        ###TODO：这部分理解完了记得拆分，目前代码太臃肿
+        # 定义评估执行函数
         def run_evaluation():
+            # 判断是否有响应类型记录
             if response_records:
+                # 执行响应评估任务
                 asyncio.run(evaluate_records_task_async(response_records, "response"))
+            # 判断是否有代码类型记录
             if code_records:
+                # 执行代码评估任务
                 asyncio.run(evaluate_records_task_async(code_records, "code"))
+            # 评估完成后更新状态
             with eval_lock:
                 eval_progress["status"] = "done"
         
+        # 创建后台评估线程
         thread = threading.Thread(target=run_evaluation)
+        # 启动评估线程
         thread.start()
         
+        # 返回任务启动信息
         return {
             "task_id": "eval_" + str(int(time.time())),
             "total_records": len(all_records),
@@ -1632,14 +1707,20 @@ async def start_evaluation(request: EvaluateRequest):
 @app.get("/api/analyst/evaluate/status")
 async def get_evaluate_status():
     """获取评估任务进度"""
+    # 获取评估锁
     with eval_lock:
+        # 复制当前进度信息
         progress = eval_progress.copy()
     
+    # 判断是否有待处理任务
     if progress["total"] > 0:
-        progress["progress"] = round(progress["completed"] / progress["total"] * 100, 2)
+        # 计算进度百分比
+        progress["progress"] = round(progress["completed"] / progress["total"] * 100, 2) #保留2位小数
     else:
+        # 无任务时进度为0
         progress["progress"] = 0
     
+    # 返回进度信息
     return progress
 
 # 3. 获取评估结果
@@ -1652,29 +1733,38 @@ async def get_results(
     end_date: str = ""
 ):
     """获取评估结果统计"""
+    # 异常处理开始
     try:
+        # 获取数据库连接
         conn = get_analyst_db_connection()
+        # 创建数据库游标
         with conn.cursor() as cursor:
+            # 初始化查询条件
             where_clause = "WHERE er.score >= %s"
+            # 设置查询参数
             params = [min_score]
             
+            # 判断是否有单表筛选
             if source_table:
                 where_clause += " AND er.source_table = %s"
                 params.append(source_table)
             
-            # 支持多个数据来源筛选
+            # 判断是否有多表筛选
             if tables:
+                # 分割表名列表
                 table_list = tables.split(",")
+                # 生成占位符
                 placeholders = ",".join(["%s"] * len(table_list))
+                # 添加IN条件
                 where_clause += f" AND er.source_table IN ({placeholders})"
                 params.extend(table_list)
             
-            # 日期范围筛选（与前端日期筛选条件保持一致）
+            # 判断是否有日期范围筛选
             if start_date and end_date:
                 where_clause += " AND DATE(er.created_at) BETWEEN %s AND %s"
                 params.extend([start_date, end_date])
             
-            # 评分分布
+            # 查询评分分布
             cursor.execute(f"""
                 SELECT score, COUNT(*) as count 
                 FROM eval_results er
@@ -1682,36 +1772,49 @@ async def get_results(
                 GROUP BY score
                 ORDER BY score
             """, params)
+            # 获取评分分布结果
             score_distribution = cursor.fetchall()
             
-            # 各维度平均分
+            # 查询各维度评分数据
             cursor.execute(f"""
                 SELECT dimensions 
                 FROM eval_results er
                 {where_clause}
             """, params)
+            # 获取所有维度数据
             all_dimensions = cursor.fetchall()
             
+            # 初始化维度平均分字典
             dimension_avg = {}
+            # 初始化维度计数字典
             dimension_counts = {}
+            # 遍历计算维度平均分
             for row in all_dimensions:
+                # 异常捕获
                 try:
+                    # 解析维度JSON
                     dims = json.loads(row["dimensions"])
+                    # 遍历各维度
                     for dim_name, dim_score in dims.items():
+                        # 初始化维度数据
                         if dim_name not in dimension_avg:
                             dimension_avg[dim_name] = 0
                             dimension_counts[dim_name] = 0
+                        # 累加维度分数
                         dimension_avg[dim_name] += dim_score
                         dimension_counts[dim_name] += 1
                 except:
+                    # 跳过解析失败的记录
                     pass
             
+            # 遍历计算最终平均分
             for dim_name in dimension_avg:
+                # 判断是否有记录
                 if dimension_counts[dim_name] > 0:
                     dimension_avg[dim_name] = round(dimension_avg[dim_name] / dimension_counts[dim_name], 2)
             
             
-            # 低分案例（score <= 3）
+            # 查询低分案例（score <= 3）
             cursor.execute(f"""
                 SELECT er.*, 
                        ucl.content as user_content,
@@ -1723,11 +1826,16 @@ async def get_results(
                 ORDER BY er.score ASC
                 LIMIT 50
             """, params)
+            # 获取低分案例
             low_score_cases = cursor.fetchall()
             
+        # 返回评估结果
         return {
+            # 格式化评分分布数据
             "score_distribution": [{"score": row["score"], "count": row["count"]} for row in score_distribution],
+            # 返回维度平均分
             "dimension_avg": dimension_avg,
+            # 格式化低分案例数据
             "low_score_cases": [
                 {
                     "id": row["id"],
@@ -1741,15 +1849,21 @@ async def get_results(
             ]
         }
     except Exception as e:
+        # 捕获异常并返回错误
         return {"error": str(e)}
     finally:
+        # 关闭数据库连接
         conn.close()
 
 # ============================================================
 # 十四、启动
 # ============================================================
 
+# 主程序入口
 if __name__ == "__main__":
+    # 导入 uvicorn 服务器
     import uvicorn
+    # 导入时间模块
     import time
+    # 启动 uvicorn 服务器
     uvicorn.run(app, host="0.0.0.0", port=8000)
