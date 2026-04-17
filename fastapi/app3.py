@@ -12,8 +12,9 @@ from fastapi import FastAPI,Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Dict, Optional
+from typing import Dict, Optional, TypedDict, List
 from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, END
 from langchain_deepseek import ChatDeepSeek
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
@@ -811,6 +812,8 @@ async def admin_ai_stream(request: ChatRequest, req: Request):
 #=======================================
 #在线绘图
 
+#在线绘图
+
 #绘图判断链
 chart_intent_prompt = ChatPromptTemplate.from_messages([
     ('system', """你是绘图助手，可以根据用户输入判断是否需要绘图。
@@ -894,84 +897,193 @@ CHART_HTML = chart.render_embed()
 python_chart_chain = python_chart_prompt | llm | StrOutputParser()
 
 #无调用的图表回复函数
-async def nochart_reply_stream(chart_message):
+# ============================================================
+# Online Chart (LangGraph, non-SSE)
+# - Nodes: sqlagent -> pythonagent -> eval -> llm-sandbox -> (fail) sandbox-fail-router -> pythonagent
+# - END condition: sandbox returns chart_html successfully
+# ============================================================
 
-    reply = ''
-    async for chunk in chart_not_chain.astream({"question": chart_message}):
-        reply += chunk
-        yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
-    yield "data: [DONE]\n\n"
+# ChartGraphState defines the shared state passed through all LangGraph nodes
+class ChartGraphState(TypedDict, total=False):
+    # User request for chart generation
+    question: str
+    # Session id (used for DB logging)
+    session_id: str
+    # Username (used for DB logging)
+    user_name: str
+    # SQLAgent output (used as data context for code generation)
+    sql_result: str
+    # Raw code produced by pythonagent (may include ```python fences)
+    code_raw: str
+    # Clean python code to execute inside sandbox
+    code: str
+    # Feedback used to ask pythonagent to revise code
+    feedback: str
+    # Whether eval node approves the code
+    eval_pass: bool
+    # Eval issues collected for debugging and feedback
+    eval_issues: List[str]
+    # Attempt counter to prevent infinite loops
+    attempts: int
+    # Final HTML (only set when sandbox execution succeeds)
+    chart_html: str
+    # Final error message (set when max retries reached or fatal error)
+    error: str
 
 
-#绘图调用的图表生成函数
-async def chart_generate_stream(chart_message: str, session_id: str = "", user_name: str = ""):
-    """在线绘图主流程"""
-
-    # 1. SQL Agent 查数据
-    print("[绘图] 开始查询数据库...")
-    try:
-        sql_result = await sql_executor.ainvoke({"input": chart_message})
-        data = sql_result.get("output", "")
-        print(f"[绘图] 数据库查询完成，结果长度: {len(data)}")
-    except Exception as e:
-        print(f"[绘图] 数据库查询失败: {e}")
-        yield f"data: {json.dumps({'content': f'数据查询失败：{str(e)}'}, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-        return
+# Extract a python code block from markdown output (```python ... ```)
+def _extract_python_code_block(text: str) -> str:
+    # Try to find a fenced python code block first
+    match = re.search(r"```python\s*(.*?)```", text, re.DOTALL)
+    # If found, use only the code block content
+    if match:
+        return match.group(1).strip()
+    # Otherwise, fall back to the full text
+    return text.strip()
 
 
-    # 2. 生成代码（只调一次）
-    print("[绘图] 开始生成代码...")
-    try:
-        code = await python_chart_chain.ainvoke({
-            "question": chart_message,
-            "data": data,
-            "feedback": ""
-        })
-        print(f"[绘图] 代码生成完成，长度: {len(code)}")
-    except Exception as e:
-        print(f"[绘图] 代码生成失败: {e}")
-        import traceback
-        traceback.print_exc()
-        yield f"data: {json.dumps({'content': '代码生成失败，请重试'}, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-        return
+# Static evaluation: only checks whether code is safe and follows the output contract
+def _static_eval(code: str) -> tuple[bool, List[str], str]:
+    # Collect issues for actionable feedback
+    issues: List[str] = []
 
-    # 2.5 简单检查（不调 LLM，纯字符串匹配）
+    # Contract: must assign CHART_HTML from chart.render_embed()
     if "CHART_HTML" not in code:
-        print("[绘图] 代码检查未通过：缺少 CHART_HTML")
-        yield f"data: {json.dumps({'content': '图表生成失败，请重试'}, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-        return
-    print("[绘图] 代码检查通过")
+        issues.append("Missing CHART_HTML assignment (must use chart.render_embed())")
 
-    # 3. 安全检查
-    print("[绘图] 开始安全检查...")
-    allowed = ["pyecharts", "pandas", "numpy", "json"]
-    for line in code.split("\n"):
-        if line.startswith("import ") or line.startswith("from "):
+    # Contract: must print START/END markers so we can extract HTML from stdout
+    if "CHART_HTML_START" not in code or "CHART_HTML_END" not in code:
+        issues.append("Missing CHART_HTML_START/CHART_HTML_END markers (stdout extraction needs them)")
+
+    # Allow-list imports (keep consistent with existing sandbox policy)
+    allowed_imports = {"pyecharts", "pandas", "numpy", "json"}
+
+    # Basic banned tokens (reduce risk even inside a sandbox)
+    banned_tokens = [
+        "import os",
+        "import sys",
+        "subprocess",
+        "socket",
+        "requests",
+        "urllib",
+        "open(",
+        "eval(",
+        "exec(",
+        "__import__",
+    ]
+
+    # Enforce allow-list on import lines
+    for line in code.splitlines():
+        # Handle `import xxx`
+        if line.startswith("import "):
             module = line.split()[1].split(".")[0]
-            if module not in allowed:
-                print(f"[绘图] 安全检查未通过: {module}")
-                yield f"data: {json.dumps({'content': '代码安全检查未通过，请重试'}, ensure_ascii=False)}\n\n"
-                yield "data: [DONE]\n\n"
-                return
-    print("[绘图] 安全检查通过")
+            if module not in allowed_imports:
+                issues.append(f"Illegal import: {module} (allowed: {sorted(allowed_imports)})")
+        # Handle `from xxx import yyy`
+        if line.startswith("from "):
+            module = line.split()[1].split(".")[0]
+            if module not in allowed_imports:
+                issues.append(f"Illegal from-import: {module} (allowed: {sorted(allowed_imports)})")
 
-    # 3.5 提取代码块（去除 ```python ... ``` 标记）
-    import re
-    code_match = re.search(r'```python\s*(.*?)```', code, re.DOTALL)
-    if code_match:
-        code = code_match.group(1).strip()
-        print(f"[绘图] 已提取代码块，长度: {len(code)}")
-    else:
-        code = code.strip()
-        print(f"[绘图] 无代码块标记，直接使用，长度: {len(code)}")
+    # Check banned tokens (simple but effective)
+    for token in banned_tokens:
+        if token in code:
+            issues.append(f"Banned token detected: {token}")
 
-        # 4. 在 Docker 沙箱中执行代码
-    print("[绘图] 开始在 Docker 沙箱中执行代码...")
+    # Passed means no issues
+    passed = len(issues) == 0
+
+    # Feedback should be directly usable by pythonagent
+    feedback = ""
+
+    # If failed, give a bullet list of fixes
+    if not passed:
+        feedback = "Please fix the following issues and output full code again:\n- " + "\n- ".join(issues)
+
+    # Return decision, issues, and feedback
+    return passed, issues, feedback
+
+
+# Node: sqlagent (reuse existing sql_executor)
+async def _node_sqlagent(state: ChartGraphState) -> ChartGraphState:
+    # Read user question
+    question = state.get("question", "")
+    print(f"[ChartGraph] sqlagent: 开始查询数据库, 问题: {question}")
+    # Query database via SQL agent
+    result = await sql_executor.ainvoke({"input": question})
+    # Store query result for downstream code generation
+    state["sql_result"] = result.get("output", "")
+    print(f"[ChartGraph] sqlagent: 查询完成, 结果长度: {len(state['sql_result'])}")
+    # Return updated state
+    return state
+
+
+# Node: pythonagent (generate pyecharts code; do NOT execute here)
+async def _node_pythonagent(state: ChartGraphState) -> ChartGraphState:
+    # Increase attempts each time we generate code
+    state["attempts"] = int(state.get("attempts", 0)) + 1
+    # Read question
+    question = state.get("question", "")
+    # Read SQL result
+    sql_result = state.get("sql_result", "")
+    # Read feedback for revision
+    feedback = state.get("feedback", "")
+    print(f"[ChartGraph] pythonagent: 开始生成代码, 尝试次数: {state['attempts']}")
+    # Generate code using the existing prompt chain
+    state["code_raw"] = await python_chart_chain.ainvoke(
+        {"question": question, "data": sql_result, "feedback": feedback}
+    )
+    print(f"[ChartGraph] pythonagent: 代码生成完成, 代码长度: {len(state['code_raw'])}")
+    # Return updated state
+    return state
+
+
+# Node: eval (static gate; fail -> back to pythonagent)
+async def _node_eval(state: ChartGraphState) -> ChartGraphState:
+    # Read raw code
+    code_raw = state.get("code_raw", "")
+    # Extract pure python code
+    code = _extract_python_code_block(code_raw)
+    # Run static evaluation
+    passed, issues, feedback = _static_eval(code)
+    print(f"[ChartGraph] eval: 代码检查通过: {passed}, 问题: {issues}")
+    # Save decision
+    state["eval_pass"] = passed
+    # Save issues
+    state["eval_issues"] = issues
+    # Save feedback (only meaningful when failed)
+    state["feedback"] = feedback
+    # Only save executable code when passed
+    if passed:
+        state["code"] = code
+    # Return updated state
+    return state
+
+
+# Node: llm-sandbox (execute code inside Docker; END requires chart_html)
+async def _node_llm_sandbox(state: ChartGraphState) -> ChartGraphState:
+    # Clear old outputs to avoid stale success
+    state.pop("chart_html", None)
+    # Clear old errors to avoid stale failure
+    state.pop("error", None)
+
+    # Read code for execution
+    code = state.get("code", "")
+    # Read logging fields
+    session_id = state.get("session_id", "")
+    # Read username for logging
+    user_name = state.get("user_name", "")
+    # Read question for logging
+    question = state.get("question", "")
+    # Read sql_result for logging
+    sql_result = state.get("sql_result", "")
+
+    print(f"[ChartGraph] llm_sandbox: 开始执行 Docker 沙箱, 代码长度: {len(code)}")
+
     try:
+        # Create docker client
         client = docker.from_env()
+        # Run sandbox container (read-only, no network, limited memory)
         container = client.containers.run(
             "pyecharts-sandbox",
             command=["python", "-c", code],
@@ -980,26 +1092,34 @@ async def chart_generate_stream(chart_message: str, session_id: str = "", user_n
             read_only=True,
             detach=True,
             stdout=True,
-            stderr=True
+            stderr=True,
         )
+        # Wait for completion
         result = container.wait()
+        # Read stdout
         stdout = container.logs(stdout=True).decode()
+        # Read stderr
         stderr = container.logs(stderr=True).decode()
+        # Remove container to avoid accumulation
         container.remove()
 
-        if result['StatusCode'] != 0:
-            raise RuntimeError(f"Docker 执行失败: {stderr}")
+        # Non-zero exit means failure
+        if result.get("StatusCode", 1) != 0:
+            raise RuntimeError(f"Docker execution failed: {stderr}")
 
-        # 从 stdout 中提取 CHART_HTML
-        match = re.search(r'CHART_HTML_START(.*?)CHART_HTML_END', stdout, re.DOTALL)
+        # Extract CHART_HTML from stdout
+        match = re.search(r"CHART_HTML_START(.*?)CHART_HTML_END", stdout, re.DOTALL)
+        # Missing markers means output contract broken
         if not match:
-            raise ValueError("Docker 执行成功但未获取到图表数据")
+            raise ValueError("Sandbox succeeded but CHART_HTML markers not found")
+
+        # Get embedded HTML fragment
         chart_html = match.group(1)
 
-        # 包成完整 HTML 页面
+        # Keep the original page embedding wrapper + echarts.js link
         chart_html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<script src="http://localhost:3000/js/echarts.js"><\/script>
+<html><head><meta charset=\"utf-8\">
+<script src=\"http://localhost:3000/js/echarts.js\"><\/script>
 <style>
 html,body{{margin:0;padding:0;width:100%;height:100%;}}
 div[_echarts_instance_]{{width:100%!important;height:100%!important;}}
@@ -1009,23 +1129,110 @@ var charts=document.querySelectorAll('div[_echarts_instance_]');
 charts.forEach(function(c){{echarts.init(c).resize();}});
 window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom(c).resize();}});}};
 <\/script></body></html>"""
-        log_chart_generation(session_id, user_name, chart_message, data, code, True)
-        print(f"[绘图] 代码执行成功，HTML长度: {len(chart_html)}")
+
+        # Save final HTML (END condition depends on this)
+        state["chart_html"] = chart_html
+
+        # Log success (reuse existing DB logger)
+        log_chart_generation(session_id, user_name, question, sql_result, code, True)
+
     except Exception as e:
-        print(f"[绘图] 代码执行失败: {e}")
-        import traceback
-        traceback.print_exc()
-        log_chart_generation(session_id, user_name, chart_message, data, code, False, str(e))
-        yield f"data: {json.dumps({'content': f'图表执行失败：{str(e)}'}, ensure_ascii=False)}\n\n"
-        yield "data: [DONE]\n\n"
-        return
+        # Save error for routing
+        state["error"] = str(e)
+        # Log failure for later inspection
+        log_chart_generation(session_id, user_name, question, sql_result, code, False, str(e))
 
-    # 5. 返回图表
-    print("[绘图] 返回图表")
-    yield f"data: {json.dumps({'type': 'chart', 'chart_html': chart_html}, ensure_ascii=False)}\n\n"
-    yield "data: [DONE]\n\n"
+    # Return updated state
+    return state
 
-#图表接口
+
+# Node E: sandbox-fail-router (turn runtime error into actionable feedback)
+async def _node_sandbox_fail_router(state: ChartGraphState) -> ChartGraphState:
+    # Read sandbox error
+    error = state.get("error", "")
+    # Build feedback for pythonagent revision
+    state["feedback"] = (
+        "Sandbox execution failed. Please revise code and output full code again.\n"
+        f"Error: {error}\n\n"
+        "Reminder: only use allowed libraries, and print CHART_HTML_START...CHART_HTML_END."
+    )
+    # Return updated state
+    return state
+
+
+# Router: after eval, decide next node
+def _route_after_eval(state: ChartGraphState):
+    # If eval failed, retry generation (with a max retry limit)
+    if not state.get("eval_pass", False):
+        # Stop if we reached retry limit
+        if int(state.get("attempts", 0)) >= 3:
+            print(f"[ChartGraph] eval: 达到最大重试次数，结束")
+            state["error"] = "Code eval failed and max retries reached"
+            return END
+        # Otherwise, go back to pythonagent
+        print(f"[ChartGraph] eval: 代码检查失败，返回 pythonagent 重试")
+        return "pythonagent"
+    # If eval passed, execute in sandbox
+    print(f"[ChartGraph] eval: 代码检查通过，前往 sandbox 执行")
+    return "llm_sandbox"
+
+
+# Router: after sandbox, decide END or retry
+def _route_after_sandbox(state: ChartGraphState):
+    # Success means we have chart_html
+    if state.get("chart_html"):
+        print(f"[ChartGraph] sandbox: 执行成功，结束")
+        return END
+    # Failure means we have error
+    if state.get("error"):
+        print(f"[ChartGraph] sandbox: 执行失败，错误: {state['error']}")
+        # Stop if we reached retry limit
+        if int(state.get("attempts", 0)) >= 3:
+            return END
+        # Otherwise, go to Node E for feedback
+        return "sandbox_fail_router"
+    # Defensive fallback
+    state["error"] = "Unknown chart graph state"
+    print(f"[ChartGraph] sandbox: 未知状态")
+    return END
+
+
+# Build and compile the chart graph once (reuse for all requests)
+def _build_chart_graph():
+    # Create a state graph
+    graph = StateGraph(ChartGraphState)
+    # Add sqlagent node
+    graph.add_node("sqlagent", _node_sqlagent)
+    # Add pythonagent node
+    graph.add_node("pythonagent", _node_pythonagent)
+    # Add eval node
+    graph.add_node("eval", _node_eval)
+    # Add sandbox execution node
+    graph.add_node("llm_sandbox", _node_llm_sandbox)
+    # Add Node E (sandbox fail router)
+    graph.add_node("sandbox_fail_router", _node_sandbox_fail_router)
+
+    # Set entry point
+    graph.set_entry_point("sqlagent")
+    # Wire sqlagent -> pythonagent
+    graph.add_edge("sqlagent", "pythonagent")
+    # Wire pythonagent -> eval
+    graph.add_edge("pythonagent", "eval")
+    # Conditional route after eval
+    graph.add_conditional_edges("eval", _route_after_eval)
+    # Conditional route after sandbox
+    graph.add_conditional_edges("llm_sandbox", _route_after_sandbox)
+    # sandbox_fail_router always returns to pythonagent
+    graph.add_edge("sandbox_fail_router", "pythonagent")
+
+    # Compile graph
+    return graph.compile()
+
+
+# Compile once and reuse
+chart_graph = _build_chart_graph()
+
+# Request model for /api/chart/generate
 class ChartRequest(BaseModel):
     message: str
     sessionId: str = ""
@@ -1033,26 +1240,55 @@ class ChartRequest(BaseModel):
 
 @app.post("/api/chart/generate")
 async def chart_generate(request: ChartRequest):
+    # Read user message (chart request)
     chart_message = request.message
+    # Read session id for logging
     session_id = request.sessionId
+    # Read username for logging
     user_name = request.username
+
+    # Decide if chart is needed (keep original intent behavior)
+    intent = await chart_intent_chain.ainvoke({"question": chart_message})
+    # Normalize intent text
+    intent = intent.strip().upper()
+    print(f"绘图意图判断: {intent}, 问题: {chart_message}")
 
     async def generate():
         try:
-            intent = await chart_intent_chain.ainvoke({"question": chart_message})
-            intent = intent.strip().upper()
-
+            # NOT_CHART: respond with a normal text reply
             if "NOT_CHART" in intent:
-                async for chunk in nochart_reply_stream(chart_message):
-                    yield chunk
+                reply = await chart_not_chain.ainvoke({"question": chart_message})
+                yield f"data: {json.dumps({'type': 'text', 'content': reply}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+            # IN_CHART: run the LangGraph flow (END requires chart_html)
+            result = await chart_graph.ainvoke(
+                {
+                    # User question
+                    "question": chart_message,
+                    # Logging fields
+                    "session_id": session_id,
+                    "user_name": user_name,
+                    # Initial feedback is empty
+                    "feedback": "",
+                    # Initial attempts count
+                    "attempts": 0,
+                }
+            )
+
+            # Success: sandbox returned chart_html
+            if result.get("chart_html"):
+                yield f"data: {json.dumps({'type': 'chart', 'chart_html': result['chart_html']}, ensure_ascii=False)}\n\n"
             else:
-                async for chunk in chart_generate_stream(chart_message, session_id=session_id, user_name=user_name):
-                    yield chunk
+                # Failure: return final error message
+                yield f"data: {json.dumps({'type': 'text', 'content': result.get('error', 'Chart generation failed')}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
         except Exception as e:
-            print(f"在线绘图接口报错: {e}")
+            print(f"绘图接口报错: {e}")
             import traceback
             traceback.print_exc()
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'text', 'content': str(e)}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(
@@ -1060,7 +1296,6 @@ async def chart_generate(request: ChartRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
-
 # ============================================================
 # 十二、LLM 评估模块（分析师功能）
 # ============================================================
