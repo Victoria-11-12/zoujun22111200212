@@ -1545,7 +1545,6 @@ class EvaluateRequest(BaseModel):
 
 #六、接口
 
-#TODO：拆分路由里的函数，将评估任务拆分成多个子任务
 # 1. 触发质量评估
 # 评估耗时较长，这边后台单独开一个线程+异步执行
 @app.post("/api/analyst/evaluate")
@@ -1864,7 +1863,7 @@ async def get_results(
 
 # 主程序入口
 if __name__ == "__main__":
-    # 导入 uvicorn 服务器
+    # 导入 uvicorn 服
     import uvicorn
     # 导入时间模块
     import time

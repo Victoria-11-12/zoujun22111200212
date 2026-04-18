@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: movie_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:-root123456}
+      MYSQL_DATABASE: ${DB_NAME:-movie_db}
+      MYSQL_USER: ${DB_USER_READONLY:-readonly_user}
+      MYSQL_PASSWORD: ${DB_PASS_READONLY:-readonly123456}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./movie_db.sql:/docker-entrypoint-initdb.d/movie_db.sql:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - movie_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Node.js 服务
+  nodejs:
+    build:
+      context: ../Web_Node
+      dockerfile: Dockerfile
+    container_name: movie_nodejs
+    restart: always
+    ports:
+      - "${NODE_PORT:-3000}:3000"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-movie_db}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASS=${DB_PASS:-root123456}
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - movie_network
+
+  # Flask 服务
+  flask:
+    build:
+      context: ../Flask
+      dockerfile: Dockerfile
+    container_name: movie_flask
+    restart: always
+    ports:
+      - "${FLASK_PORT:-5000}:5000"
+    environment:
+      - NODE_API_URL=http://nodejs:3000/api
+    volumes:
+      - ../Flask:/app
+    depends_on:
+      - nodejs
+    networks:
+      - movie_network
+
+  # FastAPI 服务
+  fastapi:
+    build:
+      context: ../fastapi
+      dockerfile: Dockerfile
+    container_name: movie_fastapi
+    restart: always
+    ports:
+      - "${FASTAPI_PORT:-8000}:8000"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-movie_db}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASS=${DB_PASS:-root123456}
+      - DB_USER_READONLY=${DB_USER_READONLY:-readonly_user}
+      - DB_PASS_READONLY=${DB_PASS_READONLY:-readonly123456}
+      - API_BASE=${API_BASE:-https://api.deepseek.com}
+      - API_KEY=${API_KEY}
+      - MODEL_NAME=${MODEL_NAME:-deepseek-chat}
+      - EVAL_API_KEY=${EVAL_API_KEY}
+      - EVAL_MODEL_NAME=${EVAL_MODEL_NAME:-deepseek-reasoner}
+    volumes:
+      - ../fastapi:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - movie_network
+
+networks:
+  movie_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
