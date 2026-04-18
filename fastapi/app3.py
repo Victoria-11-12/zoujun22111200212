@@ -907,7 +907,7 @@ python_chart_chain = python_chart_prompt | llm | StrOutputParser()
 # - 节点: sqlagent -> pythonagent -> eval -> pyecharts-sandbox -> (失败) sandbox-fail-router -> pythonagent
 # 结束条件: 沙箱成功返回 chart_html
 
-#二、共享白班，所有节点共享数据，每个节点都可以读写
+#二、状态机，共享白板，所有节点共享数据，每个节点都可以读写
 # ChartGraphState 定义在所有 LangGraph 节点之间传递的共享状态
 class ChartGraphState(TypedDict, total=False):
 
@@ -986,7 +986,8 @@ def _static_eval(code: str) -> tuple[bool, List[str], str]:
     # 返回决策、问题和反馈
     return passed, issues, feedback
 
-#四、 五个节点的实现
+#四、 4个节点的实现
+
 # 节点1: sqlagent (复用现有的 sql_executor)
 async def _node_sqlagent(state: ChartGraphState) -> ChartGraphState:
     # 读取用户问题
