@@ -1531,7 +1531,8 @@ async def evaluate_records_task_async(records: list, eval_type: str):
 
 
 #五、结构定义
-# 定义结构用于输出
+
+# 定义结构用于输出，要确保输出json格式
 # 评估请求参数模型
 class EvaluateRequest(BaseModel):
     # 数据表列表，默认包含所有日志表
@@ -1541,12 +1542,6 @@ class EvaluateRequest(BaseModel):
     # 结束日期筛选，用于过滤数据
     end_date: str = Field(default="")
 
-# 导出请求参数模型
-class ExportRequest(BaseModel):
-    # 最低评分筛选，默认值为4
-    min_score: int = Field(default=4)
-    # 数据表列表，默认用户和管理员聊天日志表
-    tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs"])
 
 #六、接口
 
@@ -1564,7 +1559,8 @@ async def start_evaluation(request: EvaluateRequest):
             return {"error": "已有评估任务正在运行"}
     
     try:
-        #链接数据库并通过前端传来的数据进行日期过滤
+        #1.数据库部分，链接数据库并通过前端传来的数据进行日期过滤，再按照类型分好组，分类依据为文本回复和code
+        # 链接数据库并通过前端传来的数据进行日期过滤
 
         conn = get_analyst_db_connection()        # 获取数据库连接
         all_records = []        # 初始化记录列表
@@ -1651,7 +1647,10 @@ async def start_evaluation(request: EvaluateRequest):
         
         # 关闭数据库连接
         conn.close()
-        
+
+#======================================
+
+       ####2.下面这部分是分组评估记录，根据评估类型code和response分组
         # 验证是否有记录
         if not all_records:
             return {"error": "没有找到符合条件的记录"}
@@ -1671,8 +1670,10 @@ async def start_evaluation(request: EvaluateRequest):
         # 更新评估进度状态
         with eval_lock:
             eval_progress["status"] = "running"
-            eval_progress["total"] = len(all_records)
+            eval_progress["total"] = len(all_records)##总记录数，包括对话和代码评估
             eval_progress["completed"] = 0
+
+##==========3.这边定义好函数就可以开始执行了
 
         # 定义评估执行函数
         def run_evaluation():
@@ -1687,7 +1688,9 @@ async def start_evaluation(request: EvaluateRequest):
             # 评估完成后更新状态，确保线程安全
             with eval_lock:
                 eval_progress["status"] = "done"
-        
+
+        #====数据准备完毕，开始启动
+
         # 创建后台评估线程
         thread = threading.Thread(target=run_evaluation)
         # 启动评估线程
@@ -1703,13 +1706,13 @@ async def start_evaluation(request: EvaluateRequest):
     except Exception as e:
         return {"error": str(e)}
 
-# 2. 查询评估进度
+# 2. 查询评估进度，前端会来拉取
 @app.get("/api/analyst/evaluate/status")
 async def get_evaluate_status():
     """获取评估任务进度"""
     # 获取评估锁
     with eval_lock:
-        # 复制当前进度信息
+        # 复制当前进度信息，这里要加锁读取，避免读到中间状态
         progress = eval_progress.copy()
     
     # 判断是否有待处理任务
@@ -1723,7 +1726,8 @@ async def get_evaluate_status():
     # 返回进度信息
     return progress
 
-# 3. 获取评估结果
+# 3. 获取评估结果，这部分内容从数据库查数据，然后返回给前端画图用
+# 也可以在node里写，但是我写出来加载页面时会慢两秒出图，为了流畅就写在这里了
 @app.get("/api/analyst/results")
 async def get_results(
     min_score: int = 0, 
@@ -1856,8 +1860,7 @@ async def get_results(
         conn.close()
 
 # ============================================================
-# 十四、启动
-# ============================================================
+# 启动
 
 # 主程序入口
 if __name__ == "__main__":
