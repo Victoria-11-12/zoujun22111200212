@@ -1545,6 +1545,7 @@ class ExportRequest(BaseModel):
 
 #六、接口
 
+#TODO：拆分路由里的函数，将评估任务拆分成多个子任务
 # 1. 触发质量评估
 # 评估耗时较长，这边后台单独开一个线程+异步执行
 @app.post("/api/analyst/evaluate")
@@ -1559,6 +1560,8 @@ async def start_evaluation(request: EvaluateRequest):
             return {"error": "已有评估任务正在运行"}
     
     try:
+        #链接数据库并通过前端传来的数据进行日期过滤
+
         conn = get_analyst_db_connection()        # 获取数据库连接
         all_records = []        # 初始化记录列表
         
@@ -1574,7 +1577,7 @@ async def start_evaluation(request: EvaluateRequest):
             
             # 遍历请求的表
             for table in request.tables:
-                # 处理对话类表
+                # 处理对话类表，对话类表有三张，分别是用户聊天日志、管理员聊天日志、安全警告日志
                 if table in ["user_chat_logs", "admin_chat_logs", "security_warning_logs"]:
                     # 查询对话记录
                     cursor.execute(f"""
