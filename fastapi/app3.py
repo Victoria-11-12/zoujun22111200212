@@ -1438,7 +1438,74 @@ def save_eval_result(source_table: str,  # 来源表名，如 'chat_logs'、'rol
 
 
 # 四、评估执行函数
-# 异步可以执行三个并发任务
+
+async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
+    """评估单条记录的独立函数
+    
+    Args:
+        record: 待评估的记录字典
+        eval_type: 评估类型，'response' 或 'code'
+        semaphore: 并发控制信号量
+    """
+    async with semaphore:  # 获取信号量，控制并发
+        try:
+            # 根据评估类型调用不同的评估链
+            # 对话评估比较简单，直接调用链评估即可
+            if eval_type == "response":  # 如果是对话评估类型
+                result = await response_eval_chain.ainvoke({  # 调用对话评估链
+                    "user_content": record.get("user_content", ""),  # 获取用户输入内容
+                    "ai_response": record.get("ai_content", "")  # 获取AI回复内容
+                })
+
+            elif eval_type == "code":  # 如果是代码评估类型
+
+                #代码评估要求较严格，后续迭代也是以代码为主，这里先获取执行结果和错误信息，并转为json一起传到链中
+                exec_result = json.dumps({  # 将执行结果转换为JSON字符串
+                    "success": record.get("is_success", False),  # 获取执行是否成功
+                    "error": record.get("error_msg", "")  # 获取错误信息
+                }, ensure_ascii=False)  # 确保支持中文
+
+                result = await code_eval_chain.ainvoke({  # 调用代码评估链
+                    "question": record.get("question", ""),  # 获取原始问题
+                    "code": record.get("generated_code", ""),  # 获取生成的代码
+                    "exec_result": exec_result  # 传入执行结果
+                })
+            
+            # 保存成功的评估结果
+            save_eval_result(  # 调用保存评估结果函数
+                source_table=record.get("source_table", ""),  # 来源表名
+                source_id=record.get("id", 0),  # 来源记录ID
+                eval_type=eval_type,  # 评估类型
+                score=result.score,  # 评估分数
+                dimensions=json.dumps(result.dimensions, ensure_ascii=False),  # 维度评分JSON
+                issues=result.issues,  # 问题描述
+                verdict=result.verdict,  # 最终判定
+                user_content=record.get("user_content", ""),  # 用户输入内容
+                ai_content=record.get("ai_content", ""),  # AI回复内容
+                created_at=record.get("created_at", "")  # 创建时间
+            )
+        except Exception as e:  # 捕获所有异常
+            # 评估失败时的处理
+            print(f"评估失败 (id={record.get('id')}): {e}")  # 打印失败日志
+            # 保存失败记录，标记为0分和fail状态
+            save_eval_result(  # 保存失败记录
+                source_table=record.get("source_table", ""),  # 来源表名
+                source_id=record.get("id", 0),  # 来源记录ID
+                eval_type=eval_type,  # 评估类型
+                score=0,  # 失败时分数为0
+                dimensions="{}",  # 空维度评分
+                issues=f"评估失败: {str(e)}",  # 记录失败原因
+                verdict="fail",  # 标记为失败状态
+                user_content=record.get("user_content", ""),  # 用户输入内容
+                ai_content=record.get("ai_content", ""),  # AI回复内容
+                created_at=record.get("created_at", "")  # 创建时间
+            )
+        finally:
+            # 无论成功失败，都更新进度，用锁避免竞态
+            with eval_lock:
+                eval_progress["completed"] += 1
+
+# 异步执行多个并发任务
 async def evaluate_records_task_async(records: list, eval_type: str):
     """异步执行评估任务
     
@@ -1446,81 +1513,14 @@ async def evaluate_records_task_async(records: list, eval_type: str):
         records: 待评估的记录列表，每条记录包含用户对话或代码执行信息
         eval_type: 评估类型，'response' 对话评估或 'code' 代码评估
     """
-    global eval_progress
-    
-    # 初始化评估进度
-    with eval_lock:
-        eval_progress["status"] = "running"  # 设置状态为运行中
-        eval_progress["total"] = len(records)  # 记录总任务数
-        eval_progress["completed"] = 0  # 初始化已完成数为0
-    
-    # 创建信号量，限制并发数为10，我调用的deepseek模型，官方说是没有并发限制，但是可能会排队
-    semaphore = asyncio.Semaphore(10)
-    
-    async def eval_one(record):
-        """评估单条记录的内部函数"""
-        async with semaphore:  # 获取信号量，控制并发
-            try:
-                # 根据评估类型调用不同的评估链
-                # 对话评估比较简单，直接调用链评估即可
-                if eval_type == "response":  # 如果是对话评估类型
-                    result = await response_eval_chain.ainvoke({  # 调用对话评估链
-                        "user_content": record.get("user_content", ""),  # 获取用户输入内容
-                        "ai_response": record.get("ai_content", "")  # 获取AI回复内容
-                    })
 
-                elif eval_type == "code":  # 如果是代码评估类型
-
-                    #代码评估要求较严格，后续迭代也是以代码为主，这里先获取执行结果和错误信息，并转为json一起传到链中
-                    exec_result = json.dumps({  # 将执行结果转换为JSON字符串
-                        "success": record.get("is_success", False),  # 获取执行是否成功
-                        "error": record.get("error_msg", "")  # 获取错误信息
-                    }, ensure_ascii=False)  # 确保支持中文
-
-                    result = await code_eval_chain.ainvoke({  # 调用代码评估链
-                        "question": record.get("question", ""),  # 获取原始问题
-                        "code": record.get("generated_code", ""),  # 获取生成的代码
-                        "exec_result": exec_result  # 传入执行结果
-                    })
-                
-                # 保存成功的评估结果
-                save_eval_result(  # 调用保存评估结果函数
-                    source_table=record.get("source_table", ""),  # 来源表名
-                    source_id=record.get("id", 0),  # 来源记录ID
-                    eval_type=eval_type,  # 评估类型
-                    score=result.score,  # 评估分数
-                    dimensions=json.dumps(result.dimensions, ensure_ascii=False),  # 维度评分JSON
-                    issues=result.issues,  # 问题描述
-                    verdict=result.verdict,  # 最终判定
-                    user_content=record.get("user_content", ""),  # 用户输入内容
-                    ai_content=record.get("ai_content", ""),  # AI回复内容
-                    created_at=record.get("created_at", "")  # 创建时间
-                )
-            except Exception as e:  # 捕获所有异常
-                # 评估失败时的处理
-                print(f"评估失败 (id={record.get('id')}): {e}")  # 打印失败日志
-                # 保存失败记录，标记为0分和fail状态
-                save_eval_result(  # 保存失败记录
-                    source_table=record.get("source_table", ""),  # 来源表名
-                    source_id=record.get("id", 0),  # 来源记录ID
-                    eval_type=eval_type,  # 评估类型
-                    score=0,  # 失败时分数为0
-                    dimensions="{}",  # 空维度评分
-                    issues=f"评估失败: {str(e)}",  # 记录失败原因
-                    verdict="fail",  # 标记为失败状态
-                    user_content=record.get("user_content", ""),  # 用户输入内容
-                    ai_content=record.get("ai_content", ""),  # AI回复内容
-                    created_at=record.get("created_at", "")  # 创建时间
-                )
-            finally:
-                # 无论成功失败，都更新进度
-                with eval_lock:
-                    eval_progress["completed"] += 1
+    # 创建信号量，限制并发数为5，我调用的deepseek模型，官方说是没有并发限制，但是可能会排队
+    semaphore = asyncio.Semaphore(5)
     
-    # 并发执行所有评估任务
-    await asyncio.gather(*[eval_one(r) for r in records])
+    # 并发执行所有评估任务，调用外部的 eval_one 函数
+    await asyncio.gather(*[eval_one(r, eval_type, semaphore) for r in records])
     
-    # 所有任务完成后更新状态
+    # 所有任务完成后更新状态，锁标记为完成
     with eval_lock:
         eval_progress["status"] = "done"
 
@@ -1546,7 +1546,7 @@ class ExportRequest(BaseModel):
 #六、接口
 
 # 1. 触发质量评估
-# 评估耗时较长，这边后台单独开一个线程+异步执行，并配上线程锁
+# 评估耗时较长，这边后台单独开一个线程+异步执行
 @app.post("/api/analyst/evaluate")
 async def start_evaluation(request: EvaluateRequest):
     """启动质量评估任务"""
@@ -1677,7 +1677,7 @@ async def start_evaluation(request: EvaluateRequest):
             if code_records:
                 # 执行代码评估任务
                 asyncio.run(evaluate_records_task_async(code_records, "code"))
-            # 评估完成后更新状态
+            # 评估完成后更新状态，确保线程安全
             with eval_lock:
                 eval_progress["status"] = "done"
         
