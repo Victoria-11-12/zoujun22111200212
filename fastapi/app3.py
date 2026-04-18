@@ -1448,6 +1448,9 @@ async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
         semaphore: 并发控制信号量
     """
     async with semaphore:  # 获取信号量，控制并发
+
+
+        
         try:
             # 根据评估类型调用不同的评估链
             # 对话评估比较简单，直接调用链评估即可
@@ -1513,6 +1516,8 @@ async def evaluate_records_task_async(records: list, eval_type: str):
         records: 待评估的记录列表，每条记录包含用户对话或代码执行信息
         eval_type: 评估类型，'response' 对话评估或 'code' 代码评估
     """
+    global eval_progress
+
 
     # 创建信号量，限制并发数为5，我调用的deepseek模型，官方说是没有并发限制，但是可能会排队
     semaphore = asyncio.Semaphore(5)
@@ -1552,7 +1557,6 @@ class ExportRequest(BaseModel):
 async def start_evaluation(request: EvaluateRequest):
     """启动质量评估任务"""
     # 声明使用全局变量评估进度
-    global eval_progress
     
     # 检查是否有运行中的评估任务
     with eval_lock:
