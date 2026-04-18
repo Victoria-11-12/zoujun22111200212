@@ -1109,25 +1109,18 @@ window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom
     except Exception as e:
         # 保存错误用于路由
         state["error"] = str(e)
+        # 将错误翻译为 LLM 可理解的反馈，供 pythonagent 重试时使用
+        state["feedback"] = (
+            "沙箱执行失败，请修改代码并重新输出完整代码。\n"
+            f"错误: {e}\n\n"
+            "提醒: 只能使用允许的库，并打印 CHART_HTML_START...CHART_HTML_END 标记。"
+        )
         # 记录失败以供后续检查
         log_chart_generation(session_id, user_name, question, sql_result, code, False, str(e))
 
     # 返回更新后的状态
     return state
 
-
-# 节点5: sandbox-fail-router (将运行时错误转换为可操作的反馈)
-async def _node_sandbox_fail_router(state: ChartGraphState) -> ChartGraphState:
-    # 读取沙箱错误
-    error = state.get("error", "")
-    # 为 pythonagent 修改构建反馈
-    state["feedback"] = (
-        "沙箱执行失败，请修改代码并重新输出完整代码。\n"
-        f"错误: {error}\n\n"
-        "提醒: 只能使用允许的库，并打印 CHART_HTML_START...CHART_HTML_END 标记。"
-    )
-    # 返回更新后的状态
-    return state
 
 
 #五、 两个路由节点
@@ -1160,8 +1153,8 @@ def _route_after_sandbox(state: ChartGraphState):
         # 如果达到重试限制则停止
         if int(state.get("attempts", 0)) >= 3:
             return END
-        # 否则，转到节点5获取反馈，节点5会将错误内容包装，再跳到节点2重新写代码
-        return "sandbox_fail_router"
+        # 跳到节点2重新写代码
+        return "pythonagent"
     # 防御性回退，如果既没有 chart_html 也没有 error，返回未知状态
     state["error"] = "未知的图表图状态"
     print(f"[ChartGraph] sandbox: 未知状态")
@@ -1178,15 +1171,14 @@ def _build_chart_graph():
     graph.add_node("pythonagent", _node_pythonagent)    # 添加 pythonagent 节点
     graph.add_node("eval", _node_eval)    # 添加 eval 节点
     graph.add_node("pyecharts_sandbox", _node_pyecharts_sandbox)    # 添加沙箱执行节点
-    graph.add_node("sandbox_fail_router", _node_sandbox_fail_router)    # 添加节点 5 (沙箱失败路由)
-
+ 
     #边
     graph.set_entry_point("sqlagent")    # 设置入口点
     graph.add_edge("sqlagent", "pythonagent")    # 连接 sqlagent -> pythonagent
     graph.add_edge("pythonagent", "eval")    # 连接 pythonagent -> eval
     graph.add_conditional_edges("eval", _route_after_eval)    # eval 之后的条件路由
     graph.add_conditional_edges("pyecharts_sandbox", _route_after_sandbox)    # sandbox 之后的条件路由
-    graph.add_edge("sandbox_fail_router", "pythonagent")    # sandbox_fail_router 总是返回到 pythonagent
+ 
 
     # 编译图
     return graph.compile()
