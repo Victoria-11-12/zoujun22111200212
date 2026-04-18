@@ -1666,7 +1666,7 @@ async def start_evaluation(request: EvaluateRequest):
             eval_progress["status"] = "running"
             eval_progress["total"] = len(all_records)
             eval_progress["completed"] = 0
-        ###TODO：这部分理解完了记得拆分，目前代码太臃肿
+
         # 定义评估执行函数
         def run_evaluation():
             # 判断是否有响应类型记录
