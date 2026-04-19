@@ -13,7 +13,6 @@
 
 ## LLM 安全架构
 
-![LLM安全架构](./fastapi/相关流程图/7.LLM安全架构图.png)
 
 系统采用三层防御路径：
 
@@ -85,9 +84,11 @@
 
 ![SQL注入](./document/screenshots/SQL注入.png)
 
-## 系统架构
+## 架构图
 
 ![系统架构图](./document/screenshots/系统架构图.png)
+
+![LLM安全架构](./fastapi/相关流程图/7.LLM安全架构图.png)
 
 ## 技术路线
 
