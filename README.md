@@ -84,11 +84,11 @@
 
 ![SQL注入](./document/screenshots/SQL注入.png)
 
-## 架构图
+## 系统架构图
 
 ![系统架构图](./document/screenshots/系统架构图.png)
 
-![LLM安全架构](./fastapi/相关流程图/7.LLM安全架构图.png)
+> 更多架构图见各服务文件夹内的 `相关流程图` 目录（Flask、Web_Node、fastapi）。
 
 ## 技术路线
 
@@ -102,7 +102,3 @@
 
 - [配置文档](./配置文档/CONFIG.md) - 完整的环境配置说明
 - [更新日志](./更新日志/) - 版本更新记录
-
-## License
-
-ISC
