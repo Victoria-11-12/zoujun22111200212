@@ -48,8 +48,8 @@
 
 ```bash
 # 1. 克隆项目
-git clone <your-repo-url>
-cd bishe_zoujun
+git clone https://github.com/Victoria-11-12/zoujun22111200212.git
+cd zoujun22111200212
 
 # 2. 导入数据库
 mysql -u root -p < 配置文档/movie_db.sql
@@ -115,12 +115,12 @@ mysql -u root -p
 
 ```sql
 -- 在 MySQL 命令行中执行
-source d:/bishe_zoujun/配置文档/movie_db.sql;
+source ./movie_db.sql;
 
 -- 验证导入成功
 USE movie_db;
 SHOW TABLES;
--- 应该看到 10 张表
+-- 应该看到 11 张表
 ```
 
 #### 1.3 创建只读用户（安全隔离）

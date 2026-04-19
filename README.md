@@ -1,141 +1,107 @@
-# LLM Agent 数据分析平台 | LangGraph 状态机工作流
+# LLM Agent 数据分析平台
+>LangChain/LangGraph 与微服务架构的智能数据分析与可视化系统
 
-> 基于 LangGraph 状态机与微服务架构的智能数据分析系统，集成 LLM 安全防御、LLM-as-Judge 质量评估与 Docker 沙箱隔离。
+> 本项目为 2026 届本科毕业设计，构建了一套生产级的 LLM Agent 数据分析平台。系统采用微服务三后端架构，集成自然语言查询、AI 自动绘图、票房预测、质量评估等核心能力，并设计了多层 LLM 安全防御体系，解决大模型应用在生产环境的可控性与安全性问题。
 
+## 核心亮点
 
-[![Demo](https://img.shields.io/badge/Demo-Bilibili-blue)](你的 B 站链接)
-[![License](https://img.shields.io/badge/License-ISC-green)](LICENSE)
+- **LangGraph 状态机工作流**：5 节点有向图（SQL 查询 → 代码生成 → 静态检查 → Docker 沙箱执行 → 失败自动重试），支持条件路由与 3 次容错重试
+- **多层 LLM 安全防御**：意图路由分流、正则拦截、Prompt 约束、字段保护、Docker 沙箱、数据库权限隔离，纵深防御注入与越权攻击
+- **LLM-as-Judge 质量评估**：DeepSeek-R1 评估对话与代码质量，评分 ≥4 数据自动导出 JSONL 用于微调闭环
+- **微服务三后端**：Node.js（认证）+ Flask（算法）+ FastAPI（Agent），独立部署，支持水平扩展
+- **操作回滚机制**：管理员 DELETE/UPDATE/INSERT 操作自动备份，支持批次级误操作恢复
 
----
+## LLM 安全架构
+
+![LLM安全架构](./fastapi/相关流程图/7.LLM安全架构图.png)
+
+系统采用三层防御路径：
+
+| 路径 | 防御措施 |
+|------|----------|
+| **普通用户** | 意图识别 → SQL Agent → 只读数据库连接 → 拦截危险词 → 提示词约束（禁止DDL/全表扫描/LIMIT） |
+| **管理员** | 意图路由 → 危险词检测（DROP/ALTER/--/#） → safe_execute_sql → 正则安全检查 → 操作前自动备份 → 执行 |
+| **图表生成** | 静态代码检查 → 白名单导入（仅pyecharts） → 禁止危险令牌（os/sys/eval） → Docker沙箱执行 → 禁用网络/只读/内存限制 |
+
+所有操作统一记录安全日志，异常请求直接拦截并返回警告。
+
+## 功能
+
+- [x] 用户登录注册
+- [x] AI 对话查询（SQL Agent）
+- [x] 在线绘图（LangGraph 工作流）
+- [x] 票房预测（LightGBM/随机森林）
+- [x] 黑马电影推荐
+- [x] 数据大屏可视化
+- [x] 管理员后台
+- [x] 操作回滚机制
+- [x] LLM 安全防御（多层）
+- [x] LLM-as-Judge 质量评估
+- [x] Docker 沙箱隔离
+
+## 快速开始
+
+详细配置和启动步骤请查看 **[配置文档](./配置文档/CONFIG.md)**。
+
+## 项目截图
+
+### 1、可视化大屏
+
+![可视化大屏](./document/screenshots/可视化大屏.png)
+
+### 2、管理员界面
+
+![管理员界面](./document/screenshots/管理员界面.png)
+
+### 3、票房预测
+
+![票房预测](./document/screenshots/票房预测.png)
+
+### 4、用户 AI 对话
+
+![用户AI对话1](./document/screenshots/用户AI对话1.png)
+
+![用户AI对话2](./document/screenshots/用户AI对话2.png)
+
+### 5、管理员 AI 对话
+
+![管理员AI1](./document/screenshots/管理员AI1.png)
+
+![管理员AI2](./document/screenshots/管理员AI2.png)
+
+### 6、在线绘图
+
+![在线绘图1](./document/screenshots/在线绘图1.png)
+
+![在线绘图2](./document/screenshots/在线绘图2.png)
+
+### 7、数据分析师
+
+![LLM-as-a-Judge](./document/screenshots/LLM-as-a-Judge.png)
+
+![导出json](./document/screenshots/导出json.png)
+
+### 8、SQL 注入拦截
+
+![SQL注入](./document/screenshots/SQL注入.png)
 
 ## 系统架构
 
-### 微服务三后端架构
+![系统架构图](./document/screenshots/系统架构图.png)
 
-| 服务 | 端口 | 技术栈 | 核心职责 |
-|------|------|--------|----------|
-| Node.js | 3000 | Express 5.x | 用户认证、JWT 签发、RESTful 数据接口、操作日志 |
-| Flask | 5000 | Flask + LightGBM/RandomForest | 票房预测、黑马推荐、ROI 可视化 |
-| FastAPI | 8000 | FastAPI + LangChain/LangGraph | 用户 SQL Agent、管理员 Agent、LangGraph 绘图工作流、质量评估 |
+## 技术路线
 
-### FastAPI Agent 架构
+- 前端使用 `HTML`、`CSS`、`JavaScript`、`ECharts`
+- 后端使用 `Node.js`、`Flask`、`FastAPI`
+- AI 框架使用 `LangChain`、`LangGraph`
+- 数据库使用 `MySQL`
+- 机器学习使用 `LightGBM`、`Random Forest`
 
-![Agent 架构图](docs/images/agent_architecture.png)
+## 详细文档
 
----
+- [配置文档](./配置文档/CONFIG.md) - 完整的环境配置说明
+- [更新日志](./更新日志/) - 版本更新记录
 
-## 核心功能模块
+## License
 
-### 1. LangGraph 绘图工作流（CodeAct 模式）
-
-![绘图流程图](docs/images/chart_workflow.png)
-
-基于 LangGraph 状态机实现自动重试的在线绘图模块：
-
-| 节点 | 功能 | 说明 |
-|------|------|------|
-| sqlagent | 查询数据 | 调用 SQL Agent 获取绘图数据 |
-| pythonagent | 生成代码 | 根据反馈生成 pyecharts 代码 |
-| eval | 静态评估 | 检查代码安全性和格式约定 |
-| pyecharts_sandbox | Docker 执行 | 沙箱渲染图表 HTML |
-
-**重试机制**：
-- 静态评估失败 → 携带 feedback 重试（最多 3 次）
-- 沙箱执行失败 → 携带错误信息重试（最多 3 次）
-
-### 2. 用户 SQL Agent（单工具精简架构）
-
-**性能优化**：
-- **LLM 调用次数**：从 6 次压缩到 1-2 次（减少 67-83%）
-- **响应时间**：从 30-40s 降至 10-15s（提升 2-3 倍）
-- **工具数量**：从 4 个精简到 1 个（精简 75%）
-
-**优化策略**：
-- 表结构预注入：DDL 直接写入 system prompt
-- 精简工具集：只保留 `sql_db_query` 单工具
-- 限制推理轮次：`max_iterations` 降为 2
-
-### 3. 管理员 Agent（多工具）
-
-**工具集**：
-- `safe_execute_sql`：安全 SQL 执行（含正则检查、自动备份）
-- `start_batch`：创建操作批次
-- `rollback_batch`：批次回滚
-- `create_user`：创建用户（自动加密密码）
-
-### 4. 七层 LLM 安全防御体系
-
-| 层级 | 技术 | 防御内容 |
-|:----:|------|----------|
-| **第 1 层** | 普通用户意图路由 | 拦截 DELETE/DROP/注入/社会工程攻击 |
-| **第 2 层** | 管理员意图路由 | 独立检测，只拦截 DDL/注入 |
-| **第 3 层** | Agent Prompt 指令 | 约束 AI 拒绝欺骗手段 |
-| **第 4 层** | 正则检查 | 拦截危险关键词（DROP/TRUNCATE/ALTER 等） |
-| **第 5 层** | 字段保护 | UPDATE 禁止修改 id/created_at |
-| **第 6 层** | Docker 沙箱 | 绘图代码容器化执行 |
-| **第 7 层** | 数据库权限隔离 | 普通用户只读，管理员读写 |
-
-### 5. 操作回滚机制
-
-![回滚机制](docs/images/rollback.png)
-
-**备份策略**：
-- **DELETE 前**：查询受影响数据，JSON 格式存入 `rollback_logs`
-- **UPDATE 前**：查询旧值，存入 `rollback_logs`
-- **INSERT 后**：查询新增数据，存入 `rollback_logs`
-
-**回滚工具**：
-
-| 工具 | 功能 |
-|------|------|
-| `rollback_last` | 撤销最近一次操作 |
-| `rollback_batch` | 撤销整个批次（按 batch_id 倒序回滚） |
-| `start_batch` | 创建新批次，后续操作归入同一批次 |
-
-### 6. 数据分析师模块（LLM-as-Judge）
-
-![数据分析师模块](docs/images/analyst_module.png)
-
-**四角色权限体系**：
-
-| 角色 | 权限 |
-|------|------|
-| 游客 | 只读查看数据大屏 |
-| 用户 | 查询 movies 表、在线绘图 |
-| 数据分析师 | 只读日志表、质量评估、导出 JSONL |
-| 管理员 | 增删改查 + 回滚 |
-
-**质量评估流程**：
-
-![质量评估流程](docs/images/eval_flow.png)
-
-**评估维度**：
-- 对话评估：相关性、完整性、准确性、格式
-- 代码评估：可运行性、图表完整性、工具箱、单位标注、类型匹配
-
----
-
-## 技术栈
-
-### 核心框架
-- **LangGraph** - 状态机工作流引擎（绘图模块 5 节点有向图）
-- **LangChain** - LLM Agent 开发框架
-- **FastAPI** - 高性能异步 API 服务
-- **Flask** - 机器学习模型服务
-- **Node.js/Express** - 用户认证与业务接口
-
-### AI 与机器学习
-- **DeepSeek V3/R1** - 对话模型与评估模型（LLM-as-Judge）
-- **LightGBM/Random Forest** - 票房预测与黑马筛选
-- **pyecharts** - 动态图表生成
-
-### 基础设施
-- **Docker** - 容器化沙箱隔离
-- **MySQL** - 关系型数据库（11 张表）
-- **JWT/bcrypt** - 身份认证与加密
-
-> 详细依赖版本见 [requirements.txt](./配置文档/requirements.txt) 和 [package.json](./Web_Node/package.json)
-
----
-
-**License**: ISC
+ISC
