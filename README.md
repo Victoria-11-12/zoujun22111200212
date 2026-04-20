@@ -8,7 +8,7 @@
 - **LangGraph 状态机工作流**：4 节点有向图（SQL 查询 → 代码生成 → 静态检查 → Docker 沙箱执行），支持条件路由与 3 次容错重试
 - **多层 LLM 安全防御**：意图路由分流、正则拦截、Prompt 约束、字段保护、Docker 沙箱、数据库权限隔离，纵深防御注入与越权攻击
 - **LLM-as-Judge 质量评估**：DeepSeek-R1 评估对话与代码质量，评分 ≥4 数据自动导出 JSONL 用于微调闭环
-- **微服务三后端**：Node.js（认证）+ Flask（算法）+ FastAPI（Agent），独立部署，支持水平扩展
+- **微服务三后端**：Node.js（业务）+ Flask（算法）+ FastAPI（Agent），独立部署，支持水平扩展
 - **操作回滚机制**：管理员 DELETE/UPDATE/INSERT 操作自动备份，支持批次级误操作恢复
 
 ## LLM 安全架构

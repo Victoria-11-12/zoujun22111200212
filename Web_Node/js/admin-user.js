@@ -81,8 +81,7 @@ window.editUser = function(id, btn) {
 document.querySelector('.add-btn').onclick = function() {
     const username = prompt("请输入新用户名:");
     if (!username) return;
-    const password = prompt("请输入初始密码:");
-    if (!password) return;
+    const password = '123456'; // 默认密码
     fetch('http://localhost:3000/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
