@@ -17,6 +17,8 @@
     // 基于时间戳和随机数生成sessionId
     const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+
+
     // ==================== 【3】打开AI助手弹窗 ====================
     // 绑定按钮点击事件
     if (aiBtn && aiModal) {

@@ -376,7 +376,7 @@ async def ai_stream(request: ChatRequest, req: Request):
     """AI 流式对话接口（普通用户）"""
     message = request.message
     session_id = request.sessionId
-    client_ip = request.clientIp 
+    client_ip = request.clientIp or (req.client.host if req.client else "")
     user_name = request.username
 
     async def generate():
