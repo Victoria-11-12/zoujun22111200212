@@ -11,16 +11,17 @@ app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ============================================================
-# 一、原有机器学习模块（保持不变）
+# 一、机器学习模块
 # ============================================================
 
+# 加载模型
 try:
     rf_model = joblib.load('random_forest_model.pkl')
     print("随机森林模型加载成功！")
 except Exception as e:
     print(f"随机森林模型加载失败: {e}")
     rf_model = None
-
+# LightGBM模型加载
 try:
     lgb_model = joblib.load('lightgbm_model_1.pkl')
     print("LightGBM模型加载成功！")
@@ -52,7 +53,7 @@ def prepare_features(df):
             df[col] = 0
     return df[feature_columns]
 
-
+#随机森林模型预测接口
 @app.route('/api/flask/dark_horses', methods=['GET'])
 def get_dark_horses():
     try:
@@ -105,7 +106,7 @@ def get_dark_horses():
         traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
-
+#lightGBM模型预测接口
 @app.route('/api/flask/predict_deep', methods=['POST'])
 def predict_deep():
     try:
@@ -145,7 +146,7 @@ def predict_deep():
         traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
-
+#随机森林
 @app.route('/api/flask/roi_comparison', methods=['GET'])
 def get_roi_comparison():
     try:
@@ -198,7 +199,7 @@ def get_roi_comparison():
         traceback.print_exc()
         return jsonify({"code": 500, "msg": str(e)})
 
-
+#lightgbm
 @app.route('/api/flask/gross_comparison', methods=['GET'])
 def get_gross_comparison():
     try:
