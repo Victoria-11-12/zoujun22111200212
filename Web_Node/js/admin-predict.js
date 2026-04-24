@@ -76,13 +76,9 @@ async function loadROIComparison() {
         const response = await fetch('http://localhost:5000/api/flask/roi_comparison');
         const res = await response.json();
         
-        console.log('API返回数据量:', res.data ? res.data.length : 0);
-        
         if (res.code === 200 && res.data.length > 0) {
             const filteredData = res.data.filter(item => item.actual_roi <= 6 && item.predicted_roi <= 6);
             const scatterData = filteredData.map(item => [item.actual_roi, item.predicted_roi, item.movie_title]);
-            
-            console.log('散点数据量:', scatterData.length);
             
             const axisMax = 7;
             

@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const mysql = require('mysql2');
-const cors = require('cors');//跨域访问，接上flask
+const cors = require('cors');
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
 const OpenAI = require('openai');

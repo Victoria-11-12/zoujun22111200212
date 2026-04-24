@@ -6,3 +6,8 @@ Web_Node/js/echarts.js linguist-vendored=true
 Web_Node/js/echarts-wordcloud.min.js linguist-vendored=true
 Web_Node/js/flexible.js linguist-vendored=true
 Web_Node/js/world.js linguist-vendored=true
+Web_Node/js/marked.min.js linguist-vendored=true
+
+# 机器学习模型文件（大文件，不计入语言统计）
+Flask/*.pkl linguist-vendored=true
+*.pkl filter=lfs diff=lfs merge=lfs -text
