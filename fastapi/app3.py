@@ -46,7 +46,8 @@ llm = ChatOpenAI(
     model=os.getenv('MODEL_NAME'),
     openai_api_key=os.getenv('API_KEY'),
     openai_api_base=os.getenv('API_BASE'),
-    temperature=0.1  #模型温度，0-1之间，越大越随机，越小越确定
+    temperature=0.1,  #模型温度，0-1之间，越大越随机，越小越确定
+    extra_body={"thinking": {"type": "disabled"}}  # 禁用思考模式
 )
 
 #数据库初始化

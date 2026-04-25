@@ -95,6 +95,7 @@
                         alert('权限不足：您没有分析师权限，无法进入数据分析平台！');
                         return;
                     }
+                    // 播放转场动画后跳转
                     const transitionVideo = document.getElementById('transitionVideo');
                     const transitionPlayer = document.getElementById('transitionPlayer');
                     transitionVideo.classList.add('active');
@@ -103,7 +104,6 @@
                         window.location.href = 'analyst.html';
                     };
                     alert('分析师身份确认，正在进入数据分析平台...');
-                    window.location.href = 'analyst.html';
                     return;
                 } else {
                     // 普通用户登录
