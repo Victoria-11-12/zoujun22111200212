@@ -254,6 +254,10 @@ def baike_search_tool(movie_name: str) -> str:
         str: 格式化的电影信息字符串，包含电影名称、基本信息、剧情简介、主要演员等
              如果搜索失败，返回错误信息字符串
     """
+    # 正则拦截：只允许中文、英文、数字、空格、常见标点
+    if not re.match(r'^[\w\u4e00-\u9fff\s\-\.·\(\)（）\!！\?？]+$', movie_name):
+        return "电影名称包含非法字符，已拒绝执行"
+    
     try:
         # 步骤1: 打开百度百科首页
         result = run_agent_command('agent-browser open "https://baike.baidu.com"')
