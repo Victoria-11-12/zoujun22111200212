@@ -7,6 +7,7 @@ import threading
 import asyncio
 import uuid
 import time
+import subprocess #用于运行agent-browser命令
 
 from dotenv import load_dotenv
 from fastapi import FastAPI,Request
@@ -192,13 +193,138 @@ def sql_db_query(query: str) -> str:
     """执行 SQL 查询语句，输入完整的 SQL 语句"""
     return db_user.run(query)
 
-#工具组装，将sql_db_query添加到user_toolkit中
-user_toolkit = [sql_db_query]
+def run_agent_command(cmd: str, timeout: int = 30) -> dict:
+    """运行agent-browser命令"""
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            shell=True,
+            timeout=timeout
+        )
+        
+        stdout = result.stdout.decode('utf-8', errors='ignore') if result.stdout else ""
+        stderr = result.stderr.decode('utf-8', errors='ignore') if result.stderr else ""
+        
+        return {
+            "success": result.returncode == 0,
+            "stdout": stdout,
+            "stderr": stderr,
+            "returncode": result.returncode
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": str(e),
+            "returncode": -1
+        }
+
+@tool
+def baike_search_tool(movie_name: str) -> str:
+    """从百度百科搜索电影信息，输入电影名称。当本地数据库没有找到电影信息时使用此工具。"""
+    try:
+        result = run_agent_command('agent-browser open "https://baike.baidu.com"')
+        if not result['success']:
+            return f"打开百度百科失败: {result['stderr'][:100]}"
+        
+        time.sleep(5)
+        
+        result = run_agent_command('agent-browser snapshot -i')
+        if not result['success'] or 'textbox' not in result['stdout']:
+            return "获取页面快照失败"
+        
+        result = run_agent_command(f'agent-browser fill @e84 "{movie_name}"')
+        if not result['success']:
+            return f"填充搜索框失败: {result['stderr'][:100]}"
+        
+        time.sleep(1)
+        
+        result = run_agent_command('agent-browser click @e71')
+        if not result['success']:
+            return f"点击搜索按钮失败: {result['stderr'][:100]}"
+        
+        time.sleep(3)
+        
+        result = run_agent_command('agent-browser snapshot')
+        if not result['success']:
+            return "获取结果页面快照失败"
+        
+        snapshot_text = result['stdout']
+        movie_info = {}
+        
+        if 'heading' in snapshot_text:
+            lines = snapshot_text.split('\n')
+            for line in lines:
+                if 'heading "' in line:
+                    start = line.find('heading "') + 9
+                    end = line.find('"', start)
+                    if start > 8 and end > start:
+                        movie_info['电影名称'] = line[start:end]
+                        break
+        
+        for i, line in enumerate(lines):
+            if '年' in line and '执导' in line and '电影' in line:
+                movie_info['基本信息'] = line.strip()
+                break
+        
+        for i, line in enumerate(lines):
+            if '《' in line and '》是由' in line and '执导' in line:
+                intro_lines = []
+                for j in range(i, min(i+5, len(lines))):
+                    intro_lines.append(lines[j].strip())
+                    if '...' in lines[j]:
+                        break
+                movie_info['剧情简介'] = ' '.join(intro_lines)
+                break
+        
+        actors = []
+        actor_section = False
+        for line in lines:
+            if '主要演员' in line:
+                actor_section = True
+                continue
+            if actor_section and 'link "' in line:
+                start = line.find('link "') + 6
+                end = line.find('"', start)
+                if start > 5 and end > start:
+                    actor_name = line[start:end]
+                    if 2 <= len(actor_name) <= 10:
+                        actors.append(actor_name)
+            if actor_section and len(actors) >= 4:
+                break
+        
+        if actors:
+            movie_info['主要演员'] = '、'.join(actors[:4])
+        
+        if not movie_info:
+            return f"未找到电影 '{movie_name}' 的相关信息"
+        
+        result_text = f"从百度百科搜索到电影信息：\n"
+        for key, value in movie_info.items():
+            result_text += f"{key}：{value}\n"
+        
+        return result_text
+        
+    except Exception as e:
+        return f"搜索过程出错: {str(e)}"
+
+#工具组装，将sql_db_query和baike_search_tool添加到user_toolkit中
+user_toolkit = [sql_db_query, baike_search_tool]
 
 #SQL Agent的提示词
 SQL_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个专业的 SQL 查询助手。数据库中有一张 movies 表，结构如下：
+    ("system", """你是一个专业的电影信息查询助手。你有两个工具可以使用：
 
+1. sql_db_query - 查询本地数据库
+   - 输入：完整的 SQL 查询语句
+   - 用途：查询本地 movies 表中的电影数据
+
+2. baike_search_tool - 从百度百科搜索电影信息
+   - 输入：电影名称
+   - 用途：当本地数据库没有找到电影信息时，从百度百科搜索
+
+数据库表结构：
 CREATE TABLE movies (
     id INT PRIMARY KEY AUTO_INCREMENT,
     movie_title VARCHAR(255),
@@ -217,14 +343,17 @@ CREATE TABLE movies (
     content_rating VARCHAR(255)
 );
 
-查询规则：
-1. 只使用 SELECT 语句，禁止执行 INSERT、UPDATE、DELETE、DROP、TRUNCATE、ALTER 等任何修改操作
-2. 禁止 SELECT *，必须明确列出需要的字段名
-3. 必须包含 WHERE 条件，禁止全表扫描（如 SELECT ... FROM movies 不带 WHERE）
-4. 查询结果必须包含 LIMIT，默认 LIMIT 20，用户明确要求更多时可适当增加，但不超过 LIMIT 100
-5. movie_title 字段包含中文和英文电影名，查询中文电影时使用 LIKE '%关键词%'
-6. 直接生成 SQL 并执行，不需要先查表结构或验证 SQL
-7. 只调用一次 sql_db_query，不要重复查询"""),
+工具使用规则：
+1. 优先使用 sql_db_query 查询本地数据库
+2. SQL查询规则：
+   - 只使用 SELECT 语句，禁止修改操作
+   - 禁止 SELECT *，必须明确列出字段名
+   - 必须包含 WHERE 条件，禁止全表扫描
+   - 查询结果必须包含 LIMIT，默认 LIMIT 20
+   - movie_title 字段包含中文和英文电影名，查询中文电影时使用 LIKE '%关键词%'
+3. 如果本地数据库查询结果为空或没有找到相关信息，再使用 baike_search_tool
+4. 不要同时调用两个工具，按顺序使用
+5. 只调用必要的工具，避免重复调用"""),
     ("human", "{input}"),
     MessagesPlaceholder("agent_scratchpad")
 ])
