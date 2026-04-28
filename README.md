@@ -10,6 +10,7 @@
 - **LLM-as-Judge 质量评估**：DeepSeek-R1 评估对话与代码质量，评分 ≥4 数据自动导出 JSONL 用于微调闭环
 - **微服务三后端**：Node.js（业务）+ Flask（算法）+ FastAPI（Agent），独立部署，支持水平扩展
 - **操作回滚机制**：管理员 DELETE/UPDATE/INSERT 操作自动备份，支持批次级误操作恢复
+- **浏览器自动化工具集成**：agent-browser 封装为 LangChain Tool，本地数据库无结果时自动从百度百科搜索电影信息
 
 ## LLM 安全架构
 
@@ -37,6 +38,7 @@
 - [x] LLM 安全防御（多层）
 - [x] LLM-as-Judge 质量评估
 - [x] Docker 沙箱隔离
+- [x] 百度百科搜索工具集成（agent-browser）
 
 ## 快速开始
 

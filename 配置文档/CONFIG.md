@@ -33,6 +33,7 @@
 | **Node.js** | 16+ | 前端服务和认证服务 |
 | **MySQL** | 5.7+ / 8.0+ | 数据存储 |
 | **Docker** | 20.10+ | CodeAct Agent 沙箱隔离（可选） |
+| **agent-browser** | 0.26.0+ | 浏览器自动化工具（可选） |
 
 ### 推荐开发工具
 
@@ -517,6 +518,88 @@ INFO:     Uvicorn running on http://127.0.0.1:8000
 |--------|------|------|------|
 | admin3 | 123456 | admin | 增删改查 |
 | user1 | 123456 | user | 查询+绘图 |
+
+---
+
+### 8. agent-browser 配置（可选）
+
+agent-browser 是一个浏览器自动化工具，用于从百度百科搜索电影信息。当本地数据库没有找到电影信息时，系统会自动调用此工具进行网页搜索。
+
+#### 8.1 安装 agent-browser
+
+**使用 npm 安装（推荐）:**
+```bash
+npm install -g agent-browser
+```
+
+**验证安装:**
+```bash
+agent-browser --version
+# 输出: 0.26.0 或更高版本
+```
+
+#### 8.2 工作原理
+
+agent-browser 通过命令行控制浏览器进行自动化操作：
+
+1. **打开页面**: `agent-browser open "https://baike.baidu.com"`
+2. **获取快照**: `agent-browser snapshot -i`（获取可交互元素）
+3. **填充输入框**: `agent-browser fill @e84 "战狼2"`（通过ref标识定位元素）
+4. **点击按钮**: `agent-browser click @e71`
+5. **提取信息**: 从页面快照中提取电影信息
+
+#### 8.3 集成说明
+
+agent-browser 已集成到 FastAPI 服务中：
+
+- **工具函数**: `baike_search_tool`（位于 `fastapi/app3.py`）
+- **调用时机**: 当 SQL Agent 查询本地数据库无结果时自动调用
+- **返回格式**: 格式化的电影信息字符串（电影名称、基本信息、剧情简介、主要演员）
+
+#### 8.4 使用场景
+
+**场景1: 查询本地数据库中不存在的电影**
+```
+用户: "战狼2的导演是谁？"
+系统: 
+  1. SQL Agent 查询本地数据库 → 无结果
+  2. 自动调用 baike_search_tool("战狼2")
+  3. 从百度百科搜索并返回信息
+```
+
+**场景2: 查询本地数据库中存在的电影**
+```
+用户: "阿凡达的评分是多少？"
+系统:
+  1. SQL Agent 查询本地数据库 → 找到结果
+  2. 直接返回数据库中的信息
+  3. 不调用 agent-browser
+```
+
+#### 8.5 注意事项
+
+1. **性能**: agent-browser 需要启动浏览器，首次调用可能需要 10-15 秒
+2. **网络**: 需要稳定的网络连接访问百度百科
+3. **可选性**: 如果不安装 agent-browser，系统仍可正常查询本地数据库中的电影
+4. **Windows 兼容**: 在 Windows 环境下已测试通过
+
+#### 8.6 故障排查
+
+**问题1: agent-browser 命令未找到**
+```bash
+# 解决方案: 全局安装
+npm install -g agent-browser
+```
+
+**问题2: 浏览器启动失败**
+```bash
+# 解决方案: 检查系统是否支持无头浏览器
+agent-browser --version
+```
+
+**问题3: 搜索超时**
+- 检查网络连接
+- 增加超时时间（在 `app3.py` 中修改 `timeout` 参数）
 
 ---
 
