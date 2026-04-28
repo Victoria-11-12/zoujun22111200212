@@ -1,0 +1,22 @@
+# ========================================
+# Node.js 服务 Dockerfile
+# 业务逻辑服务：用户认证、日志管理、基础API
+# ========================================
+
+FROM node:20-alpine
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装依赖
+COPY Web_Node/package*.json ./
+RUN npm install --production
+
+# 复制应用代码
+COPY Web_Node/ ./
+
+# 暴露端口
+EXPOSE 3000
+
+# 启动命令
+CMD ["node", "app.js"]

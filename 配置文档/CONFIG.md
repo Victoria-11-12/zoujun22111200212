@@ -799,9 +799,9 @@ bishe_zoujun/
 
 ---
 
-## Docker 部署（可选）
+## Docker 部署（推荐）
 
-如果您希望使用 Docker 一键部署整个系统，可以使用 Docker Compose。
+项目支持 Docker 一键部署，包含 MySQL + Node.js + Flask + FastAPI 完整服务栈。
 
 ### 前置要求
 
@@ -810,21 +810,23 @@ bishe_zoujun/
 
 ### 部署步骤
 
-#### 1. 配置环境变量
+#### 1. 复制环境变量模板
+
+项目已提供 Docker 环境变量模板（在配置文档目录下）：
 
 ```bash
-# 创建环境变量文件
-cd 配置文档
-cp .env.example .env
+# 复制模板文件到项目根目录
+cp 配置文档/docker/.env.docker ../.env
 
-# 编辑 .env 文件，填写实际配置
-nano .env
+# 编辑 .env 文件，填写必要配置
+# 必须配置：API_KEY（LLM API密钥）
 ```
 
 #### 2. 启动所有服务
 
 ```bash
 # 在配置文档目录下执行
+cd 配置文档
 docker-compose up -d
 
 # 查看服务状态
@@ -838,19 +840,25 @@ docker-compose logs -f
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 数据大屏 | http://localhost:3000/demo.html | 前端页面 |
-| 登录页 | http://localhost:3000/login.html | 用户登录 |
-| 后台管理 | http://localhost:3000/admin.html | 管理员界面 |
-| API 文档 | http://localhost:8000/docs | FastAPI 文档 |
+| 前端页面 | http://localhost:3000 | Node.js 业务服务 |
+| Flask API | http://localhost:5000 | 机器学习服务 |
+| FastAPI API | http://localhost:8000 | AI Agent 服务 |
+| API 文档 | http://localhost:8000/docs | FastAPI OpenAPI 文档 |
 
-#### 4. 停止服务
+#### 4. 常用命令
 
 ```bash
 # 停止所有服务
 docker-compose down
 
-# 停止并删除数据卷
+# 停止并删除数据卷（清空数据库）
 docker-compose down -v
+
+# 重启单个服务
+docker-compose restart fastapi
+
+# 进入容器调试
+docker-compose exec mysql bash
 ```
 
 ### Docker Compose 配置说明
@@ -860,15 +868,43 @@ docker-compose down -v
 | 服务 | 容器名 | 端口 | 说明 |
 |------|--------|------|------|
 | mysql | movie_mysql | 3306 | MySQL 8.0 数据库 |
-| nodejs | movie_nodejs | 3000 | Node.js 认证服务 |
+| web_node | movie_web_node | 3000 | Node.js 业务服务 |
 | flask | movie_flask | 5000 | Flask 机器学习服务 |
 | fastapi | movie_fastapi | 8000 | FastAPI AI Agent 服务 |
 
-### 数据持久化
+### 环境变量配置
 
-Docker Compose 会创建以下数据卷：
+Docker 部署需要配置以下环境变量（详见 `docker/.env.docker`）：
 
-- `mysql_data`: MySQL 数据持久化
+```env
+# 数据库配置
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=movie_db
+DB_USER=root
+DB_PASS=123456
+DB_USER_READONLY=readonly_user
+DB_PASS_READONLY=readonly_pass_123
+DB_USER_ANALYST=analyst
+DB_PASS_ANALYST=123456
+
+# LLM API 配置（必填）
+API_BASE=https://api.deepseek.com/v1
+API_KEY=your_api_key_here
+MODEL_NAME=deepseek-v4-flash
+
+# 评估模型配置
+EVAL_API_KEY=your_eval_api_key_here
+EVAL_MODEL_NAME=deepseek-v4-flash
+
+# JWT 配置
+JWT_SECRET=your_jwt_secret_key_here_change_in_production
+
+# 服务端口
+NODE_PORT=3000
+FLASK_PORT=5000
+FASTAPI_PORT=8000
+```
 
 ### 注意事项
 
@@ -876,6 +912,22 @@ Docker Compose 会创建以下数据卷：
 2. **API Key**: 必须在 `.env` 文件中配置 `API_KEY`，否则 FastAPI 服务无法正常工作
 3. **内存要求**: 建议至少 4GB 内存，推荐 8GB
 4. **网络**: 确保宿主机端口 3000/5000/8000/3306 未被占用
+5. **生产环境**: 请修改 `JWT_SECRET` 为随机字符串
+
+### 当前支持功能
+
+- ✅ 用户登录注册
+- ✅ AI 对话查询（SQL Agent）
+- ✅ 在线绘图（LangGraph 工作流）
+- ✅ 票房预测（LightGBM/随机森林）
+- ✅ 数据大屏可视化
+- ✅ 管理员后台
+- ✅ LLM 安全防御
+- ✅ LLM-as-Judge 质量评估
+
+**后续扩展计划**（Docker 配置将同步更新）：
+- 🚧 RAG 知识库检索
+- 🚧 多模态数据处理
 
 ---
 
