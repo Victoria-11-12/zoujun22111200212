@@ -49,47 +49,47 @@
 
 ### 1、可视化大屏
 
-![可视化大屏](./document/screenshots/可视化大屏.png)
+![可视化大屏](./assets/images/可视化大屏.png)
 
 ### 2、管理员界面
 
-![管理员界面](./document/screenshots/管理员界面.png)
+![管理员界面](./assets/images/管理员界面.png)
 
 ### 3、票房预测
 
-![票房预测](./document/screenshots/票房预测.png)
+![票房预测](./assets/images/票房预测.png)
 
 ### 4、用户 AI 对话
 
-![用户AI对话1](./document/screenshots/用户AI对话1.png)
+![用户AI对话1](./assets/images/用户AI对话1.png)
 
-![用户AI对话2](./document/screenshots/用户AI对话2.png)
+![用户AI对话2](./assets/images/用户AI对话2.png)
 
 ### 5、管理员 AI 对话
 
-![管理员AI1](./document/screenshots/管理员AI1.png)
+![管理员AI1](./assets/images/管理员AI1.png)
 
-![管理员AI2](./document/screenshots/管理员AI2.png)
+![管理员AI2](./assets/images/管理员AI2.png)
 
 ### 6、在线绘图
 
-![在线绘图1](./document/screenshots/在线绘图1.png)
+![在线绘图1](./assets/images/在线绘图1.png)
 
-![在线绘图2](./document/screenshots/在线绘图2.png)
+![在线绘图2](./assets/images/在线绘图2.png)
 
 ### 7、数据分析师
 
-![LLM-as-a-Judge](./document/screenshots/LLM-as-a-Judge.png)
+![LLM-as-a-Judge](./assets/images/LLM-as-a-Judge.png)
 
-![导出json](./document/screenshots/导出json.png)
+![导出json](./assets/images/导出json.png)
 
 ### 8、SQL 注入拦截
 
-![SQL注入](./document/screenshots/SQL注入.png)
+![SQL注入](./assets/images/SQL注入.png)
 
 ## 系统架构图
 
-![系统架构图](./document/screenshots/系统架构图.png)
+![系统架构图](./assets/images/系统架构图.png)
 
 > 更多架构图见各服务文件夹内的 `相关流程图` 目录（Flask、Web_Node、fastapi）。
 
