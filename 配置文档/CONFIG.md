@@ -715,6 +715,8 @@ bishe_zoujun/
 │   ├── app2.py                 # Flask 主程序
 │   ├── requirements.txt        # Flask 依赖
 │   ├── data_all/               # 数据文件
+│   │   ├── Data for repository.csv  # 仓库数据
+│   │   ├── movie.md            # 数据说明
 │   │   ├── movie1.xlsx         # 数据集1
 │   │   ├── movie2.xlsx         # 数据集2
 │   │   ├── movie3.xlsx         # 数据集3
@@ -737,7 +739,7 @@ bishe_zoujun/
 ├── Web_Node/                   # Node.js 前端服务
 │   ├── app.js                  # Node.js 主程序
 │   ├── package.json            # Node.js 依赖
-│   ├── Dockerfile              # Docker 配置
+│   ├── package-lock.json       # Node.js 锁定依赖
 │   ├── css/                    # 样式文件
 │   ├── js/                     # JavaScript 文件
 │   ├── img/                    # 图片资源
@@ -760,39 +762,39 @@ bishe_zoujun/
 ├── fastapi/                    # FastAPI AI Agent 服务
 │   ├── app3.py                 # FastAPI 主程序
 │   ├── Dockerfile              # Docker 配置
-│   ├── Dockerfile.production   # 生产环境 Docker 配置
+│   ├── agent-browser集成测试报告.md  # 集成测试文档
 │   └── 相关流程图/             # 流程图与架构图
-│       ├── FastAPI架构图.png
+│       ├── 0.FastAPI架构图.png
 │       ├── 1.用户和管理员对话的SSE流式流程图.png
 │       ├── 2.AI绘图的SSE流程图.png
 │       ├── 3.用户agent流程图.png
-│       ├── 4.管理员agent流程图.png
-│       ├── 5.langgraph状态机有向图.png
-│       ├── 6.异步执行评估流程图.png
-│       ├── 7.LLM安全架构图.png
-│       ├── 8.上下文管理流程图.png
-│       ├── 9.管理员批次回滚图.png
-│       └── 10.线程锁的设计.png
+│       ├── 4.CLI工具获取信息流程图.png
+│       ├── 5.管理员agent流程图.png
+│       ├── 6.langgraph状态机有向图.png
+│       ├── 7.异步执行评估流程图.png
+│       ├── 8.LLM安全架构图.png
+│       ├── 9.上下文管理流程图.png
+│       ├── 10.管理员批次回滚图.png
+│       └── 11.线程锁的设计.png
 │
-├── document/                   # 项目文档资源
-│   └── screenshots/            # README 截图
+├── assets/                     # 项目资源文件
+│   └── images/                 # README 截图
 │
 ├── 配置文档/                   # 配置文档目录
 │   ├── movie_db.sql            # 数据库 SQL 文件
 │   ├── requirements.txt        # Python 依赖
 │   ├── .env.example            # 环境变量模板
 │   ├── CONFIG.md               # 本配置文档
-│   ├── README.md               # 配置文档说明
-│   ├── docker-compose.yml      # Docker Compose 配置
-│   ├── start_all.bat           # Windows 一键启动脚本
-│   └── start_all.sh            # macOS 一键启动脚本
+│   └── README.md               # 配置文档说明
 │
 ├── 更新日志/                   # 开发日志
 │   └── 2026-04-*.md            # 每日更新记录
 │
 ├── README.md                   # 项目说明
 ├── .gitignore                  # Git 忽略文件
-└── .gitattributes              # Git 属性
+├── .gitattributes              # Git 属性
+├── start_all.bat               # Windows 一键启动脚本
+└── start_all.sh                # macOS 一键启动脚本
 ```
 
 ---
