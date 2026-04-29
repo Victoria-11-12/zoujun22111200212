@@ -1,25 +1,11 @@
-# 三、SQL Agent（普通用户查电影数据，在线绘图也是复用的这个）
-#内容包含一个工具，agent的组装，以及执行
+# 网络爬虫工具
+# 用于从百度百科搜索电影信息
 
-import os
 import re
 import time
 import subprocess
 from langchain.tools import tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
-from app.config import llm, db_user
 
-
-#这是他的工具，只有一个执行SQL查询的语句
-#db_user - 第55行创建的只读数据库连接实例
-#.run(query) - SQLAlchemy/LangChain 的方法，执行传入的 SQL 查询
-#query - 上一行生成的 SQL 语句字符串
-
-@tool
-def sql_db_query(query: str) -> str:
-    """执行 SQL 查询语句，输入完整的 SQL 语句"""
-    return db_user.run(query)
 
 def run_agent_command(cmd: str, timeout: int = 30) -> dict:
     """
@@ -66,6 +52,7 @@ def run_agent_command(cmd: str, timeout: int = 30) -> dict:
             "stderr": str(e),
             "returncode": -1
         }
+
 
 @tool
 def baike_search_tool(movie_name: str) -> str:
@@ -193,68 +180,3 @@ def baike_search_tool(movie_name: str) -> str:
         
     except Exception as e:
         return f"搜索过程出错: {str(e)}"
-
-#工具组装，将sql_db_query和baike_search_tool添加到user_toolkit中
-# user_toolkit 是LangChain Agent可用的工具列表
-# sql_db_query: 用于查询本地MySQL数据库中的电影信息
-# baike_search_tool: 用于从百度百科搜索电影信息（当本地数据库无结果时使用）
-user_toolkit = [sql_db_query, baike_search_tool]
-
-#SQL Agent的提示词
-# 提示词告知Agent有两个工具可用，并明确工具使用规则
-# 核心逻辑：优先查询本地数据库，无结果时再调用百度百科爬虫工具
-SQL_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个专业的电影信息查询助手。你有两个工具可以使用：
-
-1. sql_db_query - 查询本地数据库
-   - 输入：完整的 SQL 查询语句
-   - 用途：查询本地 movies 表中的电影数据
-
-2. baike_search_tool - 从百度百科搜索电影信息
-   - 输入：电影名称
-   - 用途：当本地数据库没有找到电影信息时，从百度百科搜索
-
-数据库表结构：
-CREATE TABLE movies (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    movie_title VARCHAR(255),
-    director_name VARCHAR(255),
-    actor_1_name VARCHAR(255),
-    actor_2_name VARCHAR(255),
-    actor_3_name VARCHAR(255),
-    genres VARCHAR(255),
-    title_year INT,
-    imdb_score DECIMAL(3,1),
-    gross BIGINT,
-    budget BIGINT,
-    duration INT,
-    language VARCHAR(100),
-    country VARCHAR(100),
-    content_rating VARCHAR(255)
-);
-
-工具使用规则：
-1. 优先使用 sql_db_query 查询本地数据库
-2. SQL查询规则：
-   - 只使用 SELECT 语句，禁止修改操作
-   - 禁止 SELECT *，必须明确列出字段名
-   - 必须包含 WHERE 条件，禁止全表扫描
-   - 查询结果必须包含 LIMIT，默认 LIMIT 20
-   - movie_title 字段包含中文和英文电影名，查询中文电影时使用 LIKE '%关键词%'
-3. 如果本地数据库查询结果为空或没有找到相关信息，再使用 baike_search_tool
-4. 不要同时调用两个工具，按顺序使用
-5. 只调用必要的工具，避免重复调用"""),
-    ("human", "{input}"),
-    MessagesPlaceholder("agent_scratchpad")
-])
-
-#SQL Agent的组装，将llm、user_toolkit、SQL_PROMPT组装成一个SQL Agent
-#注意概念区分，langchain里面有内置的SQL Agent，这里是指自定义的SQL Agent，会大幅度提升查询效率，减少llm的调用次数
-sql_agent = create_tool_calling_agent(llm=llm, tools=user_toolkit, prompt=SQL_PROMPT)
-
-#执行SQL Agent
-sql_executor = AgentExecutor(agent=sql_agent,  
-                             tools=user_toolkit, # 传递工具列表
-                             verbose=True, # 开启详细模式，打印执行过程
-                             max_iterations=4,# 最大迭代次数，防止无限循环调用，若问题复杂可适当调大
-                             handle_parsing_errors=True)# 处理解析错误，避免程序崩溃

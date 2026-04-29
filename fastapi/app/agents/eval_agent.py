@@ -1,4 +1,5 @@
-###评估Agent
+# 评估Agent
+# 用于评估AI回复质量和代码质量
 
 import os
 import json
@@ -11,8 +12,6 @@ from langchain_openai import ChatOpenAI
 from app.models import ResponseEvalResult, CodeEvalResult
 
 
-###一、基本配置
-
 # 评估模块专用 LLM
 eval_llm = ChatOpenAI(
     model=os.getenv('EVAL_MODEL_NAME'),
@@ -21,17 +20,15 @@ eval_llm = ChatOpenAI(
     temperature=0
 )
 
-# 分析师数据库连接（只读权限查询日志表，读写权限操作 eval_results 表）
+# 分析师数据库连接
 DB_USER_ANALYST = os.getenv('DB_USER_ANALYST')
 DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST')
 DB_URI_ANALYST = f"mysql+pymysql://{DB_USER_ANALYST}:{DB_PASS_ANALYST}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 
 # 评估进度全局变量
-eval_progress = {"status": "idle", "total": 0, "completed": 0}  # 全局字典，记录当前评估状态、总任务数、已完成任务数
-eval_lock = threading.Lock()  # 线程锁，防止多线程同时修改进度数据
+eval_progress = {"status": "idle", "total": 0, "completed": 0}
+eval_lock = threading.Lock()
 
-
-#二、评估链配置
 
 # 文本类回复评估链
 response_eval_prompt = ChatPromptTemplate.from_template("""你是一个 LLM 输出质量评估员。请对以下对话记录进行质量评估。
@@ -74,6 +71,7 @@ response_eval_chain = response_eval_prompt | eval_llm.with_structured_output(
     ResponseEvalResult,
     method="json_mode"
 )
+
 
 # 代码类评估链
 code_eval_prompt = ChatPromptTemplate.from_template("""你是一个代码质量评估员。请评估以下 pyecharts 绘图代码的质量。
@@ -121,7 +119,7 @@ code_eval_chain = code_eval_prompt | eval_llm.with_structured_output(
 )
 
 
-#三、数据库配置
+# 数据库连接函数
 def get_analyst_db_connection():
     """获取分析师数据库连接（只读权限）"""
     return pymysql.connect(
@@ -171,16 +169,9 @@ def save_eval_result(source_table: str,
         conn.close()
 
 
-# 四、评估执行函数
-
+# 评估执行函数
 async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
-    """评估单条记录的独立函数
-    
-    Args:
-        record: 待评估的记录字典
-        eval_type: 评估类型，'response' 或 'code'
-        semaphore: 并发控制信号量
-    """
+    """评估单条记录的独立函数"""
     async with semaphore:
         try:
             if eval_type == "response":
@@ -233,32 +224,22 @@ async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
 
 
 async def evaluate_records_task_async(records: list, eval_type: str):
-    """异步执行评估任务
-    
-    Args:
-        records: 待评估的记录列表，每条记录包含用户对话或代码执行信息
-        eval_type: 评估类型，'response' 对话评估或 'code' 代码评估
-    """
+    """异步执行评估任务"""
     global eval_progress
-
     semaphore = asyncio.Semaphore(5)
-    
     await asyncio.gather(*[eval_one(r, eval_type, semaphore) for r in records])
-    
     with eval_lock:
         eval_progress["status"] = "done"
 
 
-#五、结构定义
-
+# 请求模型
 class EvaluateRequest(BaseModel):
     tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs", "chart_generation_logs", "security_warning_logs"])
     start_date: str = Field(default="")
     end_date: str = Field(default="")
 
 
-#六、接口
-
+# 接口函数
 async def start_evaluation(request: EvaluateRequest):
     """启动质量评估任务"""
     global eval_progress
