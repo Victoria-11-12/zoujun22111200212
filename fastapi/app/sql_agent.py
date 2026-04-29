@@ -1,3 +1,6 @@
+# 三、SQL Agent（普通用户查电影数据，在线绘图也是复用的这个）
+#内容包含一个工具，agent的组装，以及执行
+
 import os
 import re
 import time
@@ -8,11 +11,15 @@ from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
 from app.config import llm, db_user
 
 
+#这是他的工具，只有一个执行SQL查询的语句
+#db_user - 第55行创建的只读数据库连接实例
+#.run(query) - SQLAlchemy/LangChain 的方法，执行传入的 SQL 查询
+#query - 上一行生成的 SQL 语句字符串
+
 @tool
 def sql_db_query(query: str) -> str:
     """执行 SQL 查询语句，输入完整的 SQL 语句"""
     return db_user.run(query)
-
 
 def run_agent_command(cmd: str, timeout: int = 30) -> dict:
     """
@@ -59,7 +66,6 @@ def run_agent_command(cmd: str, timeout: int = 30) -> dict:
             "stderr": str(e),
             "returncode": -1
         }
-
 
 @tool
 def baike_search_tool(movie_name: str) -> str:
@@ -188,9 +194,15 @@ def baike_search_tool(movie_name: str) -> str:
     except Exception as e:
         return f"搜索过程出错: {str(e)}"
 
-
+#工具组装，将sql_db_query和baike_search_tool添加到user_toolkit中
+# user_toolkit 是LangChain Agent可用的工具列表
+# sql_db_query: 用于查询本地MySQL数据库中的电影信息
+# baike_search_tool: 用于从百度百科搜索电影信息（当本地数据库无结果时使用）
 user_toolkit = [sql_db_query, baike_search_tool]
 
+#SQL Agent的提示词
+# 提示词告知Agent有两个工具可用，并明确工具使用规则
+# 核心逻辑：优先查询本地数据库，无结果时再调用百度百科爬虫工具
 SQL_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """你是一个专业的电影信息查询助手。你有两个工具可以使用：
 
@@ -236,8 +248,11 @@ CREATE TABLE movies (
     MessagesPlaceholder("agent_scratchpad")
 ])
 
+#SQL Agent的组装，将llm、user_toolkit、SQL_PROMPT组装成一个SQL Agent
+#注意概念区分，langchain里面有内置的SQL Agent，这里是指自定义的SQL Agent，会大幅度提升查询效率，减少llm的调用次数
 sql_agent = create_tool_calling_agent(llm=llm, tools=user_toolkit, prompt=SQL_PROMPT)
 
+#执行SQL Agent
 sql_executor = AgentExecutor(agent=sql_agent,  
                              tools=user_toolkit, # 传递工具列表
                              verbose=True, # 开启详细模式，打印执行过程

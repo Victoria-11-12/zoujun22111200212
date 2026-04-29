@@ -1,4 +1,8 @@
 import os
+
+# Windows Docker 连接配置，必须在 import docker 之前设置
+os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
+
 import json
 import bcrypt
 import re
@@ -932,9 +936,9 @@ admin_prompt = ChatPromptTemplate.from_messages([
 
 【你的职责】：
 - 创建用户时密码会自动加密，无需手动处理
-- 如果管理员要求撤销或者回滚操作，使用 rollback_last 工具
+- 如果管理员要求撤销或者回滚操作，使用 rollback_batch 工具
 - 执行增删改操作前，先调用 start_batch 创建批次
-- 若执行回滚操作，则不用创建批次，直接调用 rollback_last 工具即可
+- 若执行回滚操作，则不用创建批次，直接调用 rollback_batch 工具即可
 - 回复简明直接，不要废话
 - 回顾之前的对话内容，保持上下文连贯"""),
     MessagesPlaceholder(variable_name="history"),
@@ -1067,6 +1071,11 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 9. 图表标题通过 set_global_opts 的 title_opts 设置（注意：set_global_opts 是图表实例的方法，不是独立函数）
 10. 柱状图/折线图数据较多时，X轴标签倾斜显示：axislabel_opts=opts.LabelOpts(rotate=30)
 11.【重要】所有图表都必须包含 toolbox_opts，否则用户无法下载图片！
+12.【重要】formatter 格式规范：
+    - pyecharts 的 formatter 不支持 Python f-string 语法
+    - 如需格式化大数字（如票房显示为 317.6M），请在 Python 中预处理数据，将原数据除以 1000000，然后直接显示数值
+    - 或者使用 pyecharts.commons.utils.JsCode 包装 JavaScript 函数（注意：JsCode内使用双花括号转义）
+    - 禁止使用 Python 字符串格式化语法作为 formatter 值
      以下是一个正确的示例：
 
 ```python

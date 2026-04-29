@@ -1,3 +1,5 @@
+# 四、意图路由链
+#用户意图路由链
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from app.config import llm
@@ -20,64 +22,66 @@ INTENT_PROMPT = ChatPromptTemplate.from_messages([
    - 询问具体电影信息（如"评分最高的电影"、"2015年上映的电影"）
    - 询问统计数据（如"有多少部电影"、"平均评分"）
    - 询问演员/导演的作品列表
-   - 询问电影对比（如"比较电影A和电影B的票房"）
+   - 需要具体数据支撑的问题
 
-3. DIRECT_REPLY - 不需要查询数据库的情况：
-   - 日常问候（如"你好"、"谢谢"）
-   - 系统功能询问（如"你能做什么"）
-   - 闲聊话题（如"今天天气怎么样"）
-   - 通用知识问题（如"什么是人工智能"）
+3. DIRECT_REPLY - 直接回复的情况：
+   - 问候语（如"你好"、"早上好"）
+   - 关于系统功能的问题（如"你能做什么"）
+   - 一般性聊天（如"今天天气怎么样"）
+   - 不需要具体数据的问题
 
-请只返回以下之一：WARNING、NEED_SQL、DIRECT_REPLY
-不要添加任何解释，只返回分类结果。"""),
-    ("human", "{question}")
+请只回复 "WARNING"、"NEED_SQL" 或 "DIRECT_REPLY"，不要解释。"""),
+    ("user", "用户问题：{message}")
 ])
+#提示词+llm+输出解析器
+intent_chain = INTENT_PROMPT| llm| StrOutputParser()
 
-intent_chain = INTENT_PROMPT | llm | StrOutputParser()
+# 五、回复链
+#这里包含用户的三条回复链，分别是DIRECT_REPLY、NEED_SQL、WARNING，根据意图路由，执行指定的链
 
+#用户DIRECT_REPLY查询直接回复链
+REPLY_PROMP = ChatPromptTemplate.from_messages([
+    ("system", """你是电影数据分析助手。请友好地回复用户。
+注意：
+- 如果是问候，礼貌回应并介绍自己能查询电影数据
+- 如果是无关问题，礼貌告知只能回答电影相关问题
+- 回顾之前的对话内容，保持上下文连贯
+- 保持友好专业的语气"""),
+    MessagesPlaceholder(variable_name="history"),#MessagesPlaceholder是站位符，用于插入之前的对话内容
+    ("user", "{message}")
+])
+direct_chain = REPLY_PROMP| llm| StrOutputParser()
 
-DIRECT_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个友好的电影信息助手。用户的问题是闲聊或通用问题，不需要查询数据库。
-请用友好、简洁的方式回答。如果是问候，请礼貌回应；如果是询问你能做什么，请介绍你可以：
-1. 查询电影信息（评分、票房、演员等）
-2. 统计电影数据
-3. 比较不同电影
-4. 回答电影相关问题
-5. 回顾之前的对话内容，保持上下文连贯"""),
+#用户NEED_SQL查询后包装回复链
+WRAP_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", "你是电影数据分析助手。根据数据库查询结果，用自然语言回答用户问题。注意回顾之前的对话内容，保持上下文连贯。"),
     MessagesPlaceholder(variable_name="history"),
-    ("human", "{question}")
+    ("user", "用户问题：{question}\n\n查询结果：{result}\n\n请回答：")
 ])
+wrap_chain = WRAP_PROMPT| llm | StrOutputParser()
 
-direct_chain = DIRECT_PROMPT | llm | StrOutputParser()
-
-
+#用户WARNING警告回复链
 WARNING_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """检测到安全威胁或恶意输入。请用严肃但礼貌的方式拒绝，并说明：
-1. 检测到潜在的安全风险
-2. 只能回答电影相关的查询问题
-3. 建议重新输入合法的电影问题
-不要透露具体的安全检测细节。"""),
-    ("human", "{question}")
+    ("system", """你是电影数据分析系统的安全防护模块。用户的行为已被系统检测为潜在安全威胁。
+
+请根据用户的具体输入，生成一段警告回复，要求：
+1. 明确告知用户该行为已被记录
+2. 简要说明为什么该行为是不允许的
+3. 提醒用户继续尝试可能导致账号被封禁
+4. 语气严肃但不失礼貌
+5. 不要透露系统的具体安全机制"""),
+    ("user", "用户输入：{message}")
 ])
+warning_chain = WARNING_PROMPT| llm| StrOutputParser()
 
-warning_chain = WARNING_PROMPT | llm | StrOutputParser()
+#=======================================
+#在线绘图
 
-
-SQL_REPLY_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个专业的电影信息助手。基于数据库查询结果，用友好、专业的方式回答用户。
-要求：
-1. 直接回答用户问题，不要提及SQL或数据库
-2. 数据要准确，引用查询结果中的具体数字
-3. 如果查询结果为空，说明没有找到相关信息
-4. 可以适当扩展，提供相关的电影知识
-5. 保持回答简洁，不要冗长"""),
-    MessagesPlaceholder(variable_name="history"),
-    ("human", "用户问题：{question}\n\n查询结果：{result}\n\n请回答：")
-])
-
-sql_reply_chain = SQL_REPLY_PROMPT | llm | StrOutputParser()
+#一、相关链
+#包含绘图判断链，直接回复链，python绘图链
 
 
+#绘图判断链
 chart_intent_prompt = ChatPromptTemplate.from_messages([
     ('system', """你是绘图助手，可以根据用户输入判断是否需要绘图。
 注意：
@@ -95,7 +99,7 @@ chart_intent_prompt = ChatPromptTemplate.from_messages([
 
 chart_intent_chain = chart_intent_prompt | llm | StrOutputParser()
 
-
+#不绘图直接回复链
 chart_not_prompt = ChatPromptTemplate.from_messages([
     ('system', '''
     根据用户的请求，做出相应的回复，并告知自己只能进行绘图，无法进行其他操作。
@@ -105,6 +109,9 @@ chart_not_prompt = ChatPromptTemplate.from_messages([
 ])
 chart_not_chain = chart_not_prompt | llm | StrOutputParser()
 
+#python 绘图代码链
+#因为后续要嵌入到网页中，所以这里要用CHART_HTML = chart.render_embed()拿到图表的html字符串
+#  print("CHART_HTML_START" + CHART_HTML + "CHART_HTML_END") 这个包裹保证安全通信，方便识别
 
 python_chart_prompt = ChatPromptTemplate.from_messages([
     ("system", """你是一个 Python 可视化工程师，根据用户需求和查询结果，使用 pyecharts 生成图表代码。
@@ -131,6 +138,11 @@ python_chart_prompt = ChatPromptTemplate.from_messages([
 9. 图表标题通过 set_global_opts 的 title_opts 设置（注意：set_global_opts 是图表实例的方法，不是独立函数）
 10. 柱状图/折线图数据较多时，X轴标签倾斜显示：axislabel_opts=opts.LabelOpts(rotate=30)
 11.【重要】所有图表都必须包含 toolbox_opts，否则用户无法下载图片！
+12.【重要】formatter 格式规范：
+    - pyecharts 的 formatter 不支持 Python f-string 语法
+    - 如需格式化大数字（如票房显示为 317.6M），请在 Python 中预处理数据，将原数据除以 1000000，然后直接显示数值
+    - 或者使用 pyecharts.commons.utils.JsCode 包装 JavaScript 函数（注意：JsCode内使用双花括号转义）
+    - 禁止使用 Python 字符串格式化语法作为 formatter 值
      以下是一个正确的示例：
 
 ```python
