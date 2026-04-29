@@ -2,19 +2,19 @@ import os
 
 os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from app.models import ChatRequest, ChartRequest, EvalQueryRequest
-from app.routers.user import ai_stream
-from app.routers.admin import admin_ai_stream
-from app.routers.chart import chart_generate
-from app.agents.eval_agent import start_evaluation, get_eval_progress, query_eval_results, EvaluateRequest
+from app.routers import user, admin, chart, analyst
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    title="电影数据分析系统",
+    description="基于LangChain和LangGraph的智能电影数据查询与可视化系统",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,45 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-#普通用户 AI 接口
-@app.post("/api/ai/stream")
-async def api_ai_stream(request: ChatRequest, req: Request):
-    """AI 流式对话接口（普通用户）"""
-    return await ai_stream(request, req)
-
-
-#管理员 AI 接口
-@app.post("/api/admin/ai/stream")
-async def api_admin_ai_stream(request: ChatRequest, req: Request):
-    """AI 流式对话接口（管理员）"""
-    return await admin_ai_stream(request, req)
-
-
-#图表生成接口
-@app.post("/api/chart/generate")
-async def api_chart_generate(request: ChartRequest):
-    """图表生成接口"""
-    return await chart_generate(request)
-
-
-#评估接口
-@app.post("/api/analyst/evaluate")
-async def api_start_evaluation(request: EvaluateRequest):
-    """启动质量评估任务"""
-    return await start_evaluation(request)
-
-
-@app.get("/api/analyst/evaluate/progress")
-async def api_get_eval_progress():
-    """获取评估进度"""
-    return await get_eval_progress()
-
-
-@app.post("/api/analyst/query")
-async def api_query_eval_results(request: EvalQueryRequest):
-    """查询评估结果"""
-    return await query_eval_results(request)
+app.include_router(user.router, prefix="/api", tags=["用户"])
+app.include_router(admin.router, prefix="/api/admin", tags=["管理员"])
+app.include_router(chart.router, prefix="/api/chart", tags=["图表"])
+app.include_router(analyst.router, prefix="/api/analyst", tags=["评估"])
 
 
 if __name__ == "__main__":
