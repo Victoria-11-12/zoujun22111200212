@@ -1,67 +1,49 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Optional, TypedDict, List
+from typing import Optional
 
 
-#定义请求体的Pydantic模型
-#BaseModel会自动验证数据类型，如果参数类型错误会返回错误
-class ChatRequest(BaseModel):
-    message: str #必填，用户输入的问题
-    sessionId: str = "" #可选，会话ID
-    username: str = "" #可选，用户名
-    clientIp: str = "" #可选，客户端IP地址
+# 请求模型 - 用于API接口参数校验
 
 
-class AdminChatRequest(BaseModel):
+class ChatRequest(BaseModel):  # 用户聊天请求模型 - routers/user.py, services/user_service.py - /api/ai/stream 接口接收用户对话请求
+    message: str  # 必填，用户输入的问题
+    sessionId: str = ""  # 可选，会话ID
+    username: str = ""  # 可选，用户名
+    clientIp: str = ""  # 可选，客户端IP地址
+
+
+class AdminChatRequest(BaseModel):  # 管理员聊天请求模型 - routers/admin.py, services/admin_service.py - /api/admin/ai/stream 接口接收管理员对话请求
     message: str
     sessionId: str = ""
     username: str = ""
 
 
-# 七、图表生成接口
-
-# /api/chart/generate 的请求模型
-class ChartRequest(BaseModel):
+class ChartRequest(BaseModel):  # 图表生成请求模型 - routers/chart.py, services/chart_service.py - /api/chart/generate 接口接收图表生成请求
     message: str
     sessionId: str = ""
     username: str = ""
 
 
-class EvalQueryRequest(BaseModel):
+class EvaluateRequest(BaseModel):  # 启动评估任务请求模型 - routers/analyst.py, services/analyst_service.py - /api/analyst/evaluate 接口启动质量评估
+    tables: list[str] = Field(default=["user_chat_logs", "admin_chat_logs", "chart_generation_logs", "security_warning_logs"])
+    start_date: str = Field(default="")
+    end_date: str = Field(default="")
+
+
+class EvalQueryRequest(BaseModel):  # 评估结果查询请求模型 - routers/analyst.py, services/analyst_service.py - /api/analyst/query 接口查询评估结果
     table: str
     start_time: Optional[str] = None
     end_time: Optional[str] = None
 
 
-#二、状态机，共享白板，所有节点共享数据，每个节点都可以读写
-# ChartGraphState 定义在所有 LangGraph 节点之间传递的共享状态
-class ChartGraphState(TypedDict, total=False):
-
-    question: str # 用户输入
-    session_id: str # 会话id
-    user_name: str # 用户名
-
-    sql_result: str  # SQLAgent 输出 
-    code_raw: str  # pythonagent 生成的原始代码 (可能包含 ```python 标记)
-    code: str  # 在沙箱内执行的纯净 Python 代码
-    feedback: str  # 用于要求 pythonagent 修改代码的反馈
-    eval_pass: bool  # eval 节点是否批准代码
-    attempts: int  # 尝试计数器防止无限循环 
-    chart_html: str  # 最终 HTML (仅在沙箱执行成功时设置)
-    error: str  # # 最终错误消息 (达到最大重试次数或致命错误时设置)
-
-
-###一、基本配置
-
-##这两个模型用于结构化输出
-# 对话评估结果模型
-class ResponseEvalResult(BaseModel):
+class ResponseEvalResult(BaseModel):  # 对话评估结果模型 - agents/eval_agent.py - 评估Agent对用户对话回复进行质量评分
     score: int = Field(description="总分1-5")
     dimensions: dict = Field(description='{"相关性":5,"完整性":4,"准确性":3,"格式":5}')
     issues: str = Field(description="问题描述")
     verdict: str = Field(description="pass/review/fail")
 
-# 绘图评估结果模型
-class CodeEvalResult(BaseModel):
+
+class CodeEvalResult(BaseModel):  # 代码评估结果模型 - agents/eval_agent.py - 评估Agent对图表生成代码进行质量评分
     score: int = Field(description="总分1-5")
     dimensions: dict = Field(description='{"可运行性":5,"图表完整性":4,"工具箱":3,"单位标注":5,"类型匹配":4}')
     issues: str = Field(description="问题描述")

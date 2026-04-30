@@ -3,13 +3,28 @@
 
 import re
 import docker
-from typing import List
+from typing import List, TypedDict
 from langgraph.graph import StateGraph, END
-from app.models import ChartGraphState
 from app.agents.sql_agent import sql_executor
 from app.chains.chart_chains import python_chart_chain
 from app.logs import log_chart_generation
 
+
+# 状态机，共享白板，所有节点共享数据，每个节点都可以读写
+# ChartGraphState 定义在所有 LangGraph 节点之间传递的共享状态
+class ChartGraphState(TypedDict, total=False):
+    question: str  # 用户输入
+    session_id: str  # 会话id
+    user_name: str  # 用户名
+
+    sql_result: str  # SQLAgent 输出
+    code_raw: str  # pythonagent 生成的原始代码 (可能包含 ```python 标记)
+    code: str  # 在沙箱内执行的纯净 Python 代码
+    feedback: str  # 用于要求 pythonagent 修改代码的反馈
+    eval_pass: bool  # eval 节点是否批准代码
+    attempts: int  # 尝试计数器防止无限循环
+    chart_html: str  # 最终 HTML (仅在沙箱执行成功时设置)
+    error: str  # 最终错误消息 (达到最大重试次数或致命错误时设置)
 
 # 正则从 markdown 输出中提取 Python 代码块
 def _extract_python_code_block(text: str) -> str:

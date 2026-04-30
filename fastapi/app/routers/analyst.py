@@ -3,9 +3,8 @@
 
 from fastapi import APIRouter
 
-from app.models import EvalQueryRequest
-from app.agents.eval_agent import EvaluateRequest
-from app.services.analyst_service import evaluate, get_progress, query_results
+from app.models import EvalQueryRequest, EvaluateRequest
+from app.services.analyst_service import start_evaluation, get_progress, query_results
 
 
 router = APIRouter()
@@ -14,7 +13,7 @@ router = APIRouter()
 @router.post("/evaluate")
 async def api_start_evaluation(request: EvaluateRequest):
     """启动质量评估任务"""
-    return await evaluate(request)
+    return await start_evaluation(request)
 
 
 @router.get("/evaluate/progress")

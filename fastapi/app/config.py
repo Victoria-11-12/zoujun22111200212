@@ -43,3 +43,16 @@ print(f"数据库连接成功，可用表: {db.get_usable_table_names()}")
 #数据库中要保存的模型名称，用于评估模型回复质量
 #因为使用的模型名称都是一样的，所以这里直接从环境变量获取
 MODEL_NAME = os.getenv('MODEL_NAME')
+
+# 评估模块专用 LLM
+eval_llm = ChatOpenAI(
+    model=os.getenv('EVAL_MODEL_NAME'),
+    api_key=os.getenv('EVAL_API_KEY'),
+    base_url=os.getenv('API_BASE'),
+    temperature=0
+)
+
+# 分析师数据库连接（只读权限，用于质量评估）
+DB_USER_ANALYST = os.getenv('DB_USER_ANALYST')
+DB_PASS_ANALYST = os.getenv('DB_PASS_ANALYST')
+DB_URI_ANALYST = f"mysql+pymysql://{DB_USER_ANALYST}:{DB_PASS_ANALYST}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
