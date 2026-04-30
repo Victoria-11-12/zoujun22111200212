@@ -3,9 +3,11 @@
 
 import os
 import json
-import hashlib
 import re
+import uuid
+import bcrypt
 import pymysql
+from sqlalchemy import create_engine
 from langchain.tools import tool
 from app.config import DB_URI_ADMIN
 from app.logs import log_security_warning
@@ -57,15 +59,15 @@ def backup_data(table_name: str, action: str, data: list):
 @tool
 def create_user(username: str, password: str, role: str = "user") -> str:
     """创建新用户，密码会自动加密，role 默认为 user，管理员可设置为 admin"""
-    conn = __import__('sqlalchemy').create_engine(DB_URI_ADMIN).raw_connection()
+    conn = create_engine(DB_URI_ADMIN).raw_connection()
     try:
         cursor = conn.cursor()
         # 检查用户是否存在
         cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
         if cursor.fetchone():
             return f"用户 {username} 已存在"
-        # 密码加密
-        hashed = hashlib.sha256(password.encode()).hexdigest()
+        # 密码加密，使用bcrypt进行安全哈希
+        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         cursor.execute(
             "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
             (username, hashed, role)
@@ -155,7 +157,7 @@ def safe_execute_sql(query: str) -> str:
 def start_batch() -> str:
     """开始一个操作批次。在执行数据库增删改操作之前调用，之后可以用 rollback_batch 一次性回滚整个批次。无需参数。"""
     global _current_batch_id
-    _current_batch_id = str(__import__('uuid').uuid4())[:8]
+    _current_batch_id = str(uuid.uuid4())[:8]
     # 生成批次代码，global修改全局变量，让后续备份操作都共享这个批次号
     return f"已创建新批次 {_current_batch_id}，后续操作将归入此批次。"
 
@@ -166,7 +168,7 @@ def rollback_batch() -> str:
     """撤销一个批次的指定或所有操作。数据库增删改操作后使用此工具可以一次性回滚。无需参数。"""
     try:
         # 链接数据库
-        conn = __import__('sqlalchemy').create_engine(DB_URI_ADMIN).raw_connection()
+        conn = create_engine(DB_URI_ADMIN).raw_connection()
         # 创建游标
         with conn.cursor() as cursor:
             # 获取最近的批次ID

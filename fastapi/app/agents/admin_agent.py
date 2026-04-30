@@ -2,7 +2,7 @@
 # 用于管理用户、执行SQL操作、回滚等
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_tool_calling_agent, AgentExecutor
+from  langchain_classic.agents import create_tool_calling_agent, AgentExecutor
 from app.config import llm
 from app.tools.admin_tools import admin_tools
 
