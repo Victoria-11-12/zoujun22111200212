@@ -73,6 +73,15 @@ def create_user(username: str, password: str, role: str = "user") -> str:
             (username, hashed, role)
         )
         conn.commit()
+        # 备份新插入的用户（回滚时需要删除）
+        # 查询新插入的用户数据
+        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+        # 获取列名
+        columns = [desc[0] for desc in cursor.description]
+        # 将查询结果转换为字典
+        row = dict(zip(columns, cursor.fetchone()))
+        # 调用函数备份数据
+        backup_data("users", "INSERT", [row])
         return f"用户 {username} 创建成功，角色：{role}"
     except Exception as e:
         return f"创建用户失败: {str(e)}"
