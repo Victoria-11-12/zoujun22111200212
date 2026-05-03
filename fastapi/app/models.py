@@ -16,6 +16,7 @@ class AdminChatRequest(BaseModel):  # 管理员聊天请求模型 - routers/admi
     message: str
     sessionId: str = ""
     username: str = ""
+    clientIp: str = ""  # 客户端IP地址
 
 
 class ChartRequest(BaseModel):  # 图表生成请求模型 - routers/chart.py, services/chart_service.py - /api/chart/generate 接口接收图表生成请求

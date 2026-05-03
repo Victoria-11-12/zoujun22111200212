@@ -31,7 +31,7 @@ async def admin_ai_stream(request: AdminChatRequest, req: Request):
     
     message = request.message
     session_id = request.sessionId
-    client_ip = getattr(request, 'clientIp', '') or (req.client.host if req.client else "")
+    client_ip = request.clientIp or (req.client.host if req.client else "")
     history = get_history(session_id)[-MAX_HISTORY * 2:]
 
     async def generate():

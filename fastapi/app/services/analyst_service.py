@@ -288,3 +288,109 @@ async def query_results(request: EvalQueryRequest):
             return results
     finally:
         conn.close()
+
+
+# 获取评估结果统计
+async def get_results_stats(
+    min_score: int = 0,
+    source_table: str = "",
+    tables: str = "",
+    start_date: str = "",
+    end_date: str = ""
+):
+    """获取评估结果统计，用于前端画图展示"""
+    try:
+        conn = get_analyst_db_connection()
+        with conn.cursor() as cursor:
+            # 初始化查询条件
+            where_clause = "WHERE er.score >= %s"
+            params = [min_score]
+
+            # 判断是否有单表筛选
+            if source_table:
+                where_clause += " AND er.source_table = %s"
+                params.append(source_table)
+
+            # 判断是否有多表筛选
+            if tables:
+                table_list = tables.split(",")
+                placeholders = ",".join(["%s"] * len(table_list))
+                where_clause += f" AND er.source_table IN ({placeholders})"
+                params.extend(table_list)
+
+            # 判断是否有日期范围筛选
+            if start_date and end_date:
+                where_clause += " AND DATE(er.created_at) BETWEEN %s AND %s"
+                params.extend([start_date, end_date])
+
+            # 查询评分分布
+            cursor.execute(f"""
+                SELECT score, COUNT(*) as count 
+                FROM eval_results er
+                {where_clause}
+                GROUP BY score
+                ORDER BY score
+            """, params)
+            score_distribution = cursor.fetchall()
+
+            # 查询各维度评分数据
+            cursor.execute(f"""
+                SELECT dimensions 
+                FROM eval_results er
+                {where_clause}
+            """, params)
+            all_dimensions = cursor.fetchall()
+
+            # 计算维度平均分
+            dimension_avg = {}
+            dimension_counts = {}
+            for row in all_dimensions:
+                try:
+                    dims = json.loads(row["dimensions"])
+                    for dim_name, dim_score in dims.items():
+                        if dim_name not in dimension_avg:
+                            dimension_avg[dim_name] = 0
+                            dimension_counts[dim_name] = 0
+                        dimension_avg[dim_name] += dim_score
+                        dimension_counts[dim_name] += 1
+                except:
+                    pass
+
+            for dim_name in dimension_avg:
+                if dimension_counts[dim_name] > 0:
+                    dimension_avg[dim_name] = round(dimension_avg[dim_name] / dimension_counts[dim_name], 2)
+
+            # 查询低分案例（score <= 3）
+            cursor.execute(f"""
+                SELECT er.*, 
+                       ucl.content as user_content,
+                       ucl2.content as ai_content
+                FROM eval_results er
+                LEFT JOIN user_chat_logs ucl ON er.source_table = 'user_chat_logs' AND er.source_id = ucl.id
+                LEFT JOIN user_chat_logs ucl2 ON er.source_table = 'user_chat_logs' AND er.source_id = ucl2.id AND ucl2.role = 'ai'
+                {where_clause} AND er.score <= 3
+                ORDER BY er.score ASC
+                LIMIT 50
+            """, params)
+            low_score_cases = cursor.fetchall()
+
+        # 返回评估结果
+        return {
+            "score_distribution": [{"score": row["score"], "count": row["count"]} for row in score_distribution],
+            "dimension_avg": dimension_avg,
+            "low_score_cases": [
+                {
+                    "id": row["id"],
+                    "source_table": row["source_table"],
+                    "score": row["score"],
+                    "issues": row["issues"],
+                    "user_content": row.get("user_content", ""),
+                    "ai_content": row.get("ai_content", "")
+                }
+                for row in low_score_cases
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
