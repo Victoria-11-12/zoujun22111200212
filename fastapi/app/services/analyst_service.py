@@ -8,7 +8,7 @@ import threading
 import pymysql
 from app.models import EvalQueryRequest, EvaluateRequest
 from app.chains.eval_chains import response_eval_chain, code_eval_chain
-from app.config import DB_USER_ANALYST, DB_PASS_ANALYST
+from app.config import engine_analyst
 
 
 # 评估进度全局变量
@@ -17,21 +17,18 @@ eval_lock = threading.Lock()
 
 
 # 数据库连接函数
-# 说明：评估模块使用 pymysql 直接连接数据库，而不是通过 LangChain 的 SQLDatabase
+# 说明：评估模块使用连接池获取数据库连接
 # 原因：
 #   1. 需要同时查询多个表（user_chat_logs, admin_chat_logs, chart_generation_logs 等）
 #   2. 需要执行复杂的关联查询和会话匹配逻辑
 #   3. 需要插入数据到 eval_results 表
 # 其他 Agent（sql_agent, admin_agent）本身不直接连接数据库，而是通过 tools/ 中的工具函数操作
 def get_analyst_db_connection():
-    """获取分析师数据库连接（只读权限）"""
-    return pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        user=DB_USER_ANALYST,
-        password=DB_PASS_ANALYST,
-        database=os.getenv('DB_NAME'),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    """获取分析师数据库连接（只读权限），使用连接池"""
+    conn = engine_analyst.raw_connection()
+    # pymysql 连接需要设置 cursorclass 才能返回字典格式
+    conn.cursorclass = pymysql.cursors.DictCursor
+    return conn
 
 
 # 保存评估结果到 eval_results 表

@@ -7,9 +7,8 @@ import re
 import uuid
 import bcrypt
 import pymysql
-from sqlalchemy import create_engine
 from langchain.tools import tool
-from app.config import DB_URI_ADMIN
+from app.config import engine
 from app.logs import log_security_warning
 
 
@@ -36,11 +35,8 @@ def check_sql_safety(sql: str) -> tuple[bool, str]:
 def backup_data(table_name: str, action: str, data: list):
     global _current_admin_name, _current_batch_id
     try:
-        # 链接数据库
-        conn = pymysql.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
-        )
+        # 使用连接池获取连接
+        conn = engine.raw_connection()
         # 执行SQL语句，将操作记录写入回滚日志表
         with conn.cursor() as cursor:
             cursor.execute(
@@ -59,7 +55,7 @@ def backup_data(table_name: str, action: str, data: list):
 @tool
 def create_user(username: str, password: str, role: str = "user") -> str:
     """创建新用户，密码会自动加密，role 默认为 user，管理员可设置为 admin"""
-    conn = create_engine(DB_URI_ADMIN).raw_connection()
+    conn = engine.raw_connection()
     try:
         cursor = conn.cursor()
         # 检查用户是否存在
@@ -108,11 +104,8 @@ def safe_execute_sql(query: str) -> str:
     sql_upper = query.upper().strip()
 
     try:
-        # 链接数据库
-        conn = pymysql.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME')
-        )
+        # 使用连接池获取连接
+        conn = engine.raw_connection()
         # 创建游标
         with conn.cursor() as cursor:
             # DELETE/UPDATE 执行前备份数据
@@ -176,8 +169,8 @@ def start_batch() -> str:
 def rollback_batch() -> str:
     """撤销一个批次的指定或所有操作。数据库增删改操作后使用此工具可以一次性回滚。无需参数。"""
     try:
-        # 链接数据库
-        conn = create_engine(DB_URI_ADMIN).raw_connection()
+        # 使用连接池获取连接
+        conn = engine.raw_connection()
         # 创建游标
         with conn.cursor() as cursor:
             # 获取最近的批次ID

@@ -1,20 +1,15 @@
 import os
 import pymysql
 from contextlib import contextmanager
-from app.config import MODEL_NAME
+from app.config import MODEL_NAME, engine
 
 
 # 公共数据库连接工具
-# 使用contextmanager自动管理连接的创建和关闭，避免重复代码
+# 使用连接池获取连接，自动管理连接的创建和关闭
 @contextmanager
 def get_db_connection():
-    """获取数据库连接的上下文管理器，自动处理连接关闭"""
-    conn = pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASS'),
-        database=os.getenv('DB_NAME')
-    )
+    """获取数据库连接的上下文管理器，使用连接池"""
+    conn = engine.raw_connection()
     try:
         yield conn
     finally:
