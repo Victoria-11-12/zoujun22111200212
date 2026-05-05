@@ -28,7 +28,7 @@ class TestPostChartGenerate:
     @pytest.mark.asyncio
     async def test_chart_request_success(self, async_client):
         payload = {
-            "message": "绘制电影评分分布图",
+            "message": "绘制2002年票房前十的柱状图图",
             "sessionId": "e2e-chart-session-002",
             "username": "test_user"
         }

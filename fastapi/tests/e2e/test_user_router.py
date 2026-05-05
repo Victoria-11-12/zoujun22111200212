@@ -95,3 +95,20 @@ class TestPostAiStream:
                 if line.strip():
                     chunks.append(line.strip())
         assert any("[DONE]" in c for c in chunks), "异常场景未收到 [DONE] 结束标记"
+
+    @pytest.mark.e2e
+    @pytest.mark.asyncio
+    async def test_web_search_fallback(self, async_client):
+        payload = {
+            "message": "查询《我许可》这部电影",
+            "sessionId": "e2e-test-session-006",
+            "username": "test_user",
+            "clientIp": "127.0.0.1"
+        }
+        chunks = []
+        async with async_client.stream("POST", "/api/ai/stream", json=payload) as response:
+            assert response.status_code == 200
+            async for line in response.aiter_lines():
+                if line.strip():
+                    chunks.append(line.strip())
+        assert any("[DONE]" in c for c in chunks), "数据库无结果后浏览器搜索场景未收到 [DONE] 结束标记"
