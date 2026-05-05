@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for app\tools\admin_tools.py: 77%</title>
+    <title>Coverage for app\tools\admin_tools.py: 74%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_5c747636.css" type="text/css">
     <script src="coverage_html_cb_188fc9a4.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>app&#8201;\&#8201;tools&#8201;\&#8201;admin_tools.py</b>:
-            <span class="pc_cov">77%</span>
+            <span class="pc_cov">74%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">136 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">105<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">31<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">101<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">35<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_39795c679c66d98b_sql_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-05 23:15 +0800
+            created at 2026-05-05 23:29 +0800
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -109,7 +109,7 @@
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="com"># &#36941;&#21382;&#27491;&#21017;&#21305;&#37197;&#65292;&#21253;&#21547;&#21361;&#38505;&#35789;&#30452;&#25509;&#36820;&#22238;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">    <span class="key">for</span> <span class="nam">pattern</span> <span class="key">in</span> <span class="nam">DANGEROUS_KEYWORDS</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">        <span class="key">if</span> <span class="nam">re</span><span class="op">.</span><span class="nam">search</span><span class="op">(</span><span class="nam">pattern</span><span class="op">,</span> <span class="nam">sql_upper</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">            <span class="key">return</span> <span class="key">False</span><span class="op">,</span> <span class="str">f"&#21253;&#21547;&#31105;&#27490;&#25805;&#20316;: {pattern}"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">            <span class="key">return</span> <span class="key">False</span><span class="op">,</span> <span class="str">f"&#21253;&#21547;&#31105;&#27490;&#25805;&#20316;: {pattern}"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">    <span class="key">return</span> <span class="key">True</span><span class="op">,</span> <span class="str">"&#36890;&#36807;"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -201,14 +201,14 @@
     <p class="run"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">                <span class="key">if</span> <span class="nam">table_match</span> <span class="key">and</span> <span class="nam">where_match</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">                    <span class="com"># &#21015;&#34920;&#25512;&#23548;&#24335;&#36807;&#28388;&#31354;&#20540;&#65292;&#21462;&#31532;&#19968;&#20010;&#38750;&#31354;&#20540;&#20316;&#20026;&#34920;&#21517;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">                    <span class="nam">table_name</span> <span class="op">=</span> <span class="op">[</span><span class="nam">t</span> <span class="key">for</span> <span class="nam">t</span> <span class="key">in</span> <span class="nam">table_match</span><span class="op">.</span><span class="nam">groups</span><span class="op">(</span><span class="op">)</span> <span class="key">if</span> <span class="nam">t</span><span class="op">]</span><span class="op">[</span><span class="num">0</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">                    <span class="nam">table_name</span> <span class="op">=</span> <span class="op">[</span><span class="nam">t</span> <span class="key">for</span> <span class="nam">t</span> <span class="key">in</span> <span class="nam">table_match</span><span class="op">.</span><span class="nam">groups</span><span class="op">(</span><span class="op">)</span> <span class="key">if</span> <span class="nam">t</span><span class="op">]</span><span class="op">[</span><span class="num">0</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">                    <span class="com"># where&#21482;&#26377;&#19968;&#20010;&#25429;&#33719;&#32452;&#65292;&#19981;&#38656;&#35201;&#36807;&#28388;&#31354;&#20540;&#65292;&#30452;&#25509;&#21462;&#31532;&#19968;&#20010;&#25429;&#33719;&#32452;&#20869;&#23481;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                    <span class="nam">where_clause</span> <span class="op">=</span> <span class="nam">where_match</span><span class="op">.</span><span class="nam">group</span><span class="op">(</span><span class="num">1</span><span class="op">)</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">                    <span class="nam">where_clause</span> <span class="op">=</span> <span class="nam">where_match</span><span class="op">.</span><span class="nam">group</span><span class="op">(</span><span class="num">1</span><span class="op">)</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">                    <span class="com"># &#26681;&#25454;&#25805;&#20316;&#31867;&#22411;&#21028;&#26029;&#22791;&#20221;&#25805;&#20316;&#26159;DELETE&#36824;&#26159;UPDATE</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">                    <span class="nam">action</span> <span class="op">=</span> <span class="str">"DELETE"</span> <span class="key">if</span> <span class="nam">sql_upper</span><span class="op">.</span><span class="nam">startswith</span><span class="op">(</span><span class="str">'DELETE'</span><span class="op">)</span> <span class="key">else</span> <span class="str">"UPDATE"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">                    <span class="nam">action</span> <span class="op">=</span> <span class="str">"DELETE"</span> <span class="key">if</span> <span class="nam">sql_upper</span><span class="op">.</span><span class="nam">startswith</span><span class="op">(</span><span class="str">'DELETE'</span><span class="op">)</span> <span class="key">else</span> <span class="str">"UPDATE"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">                    <span class="com"># &#26597;&#35810;&#35201;&#22791;&#20221;&#30340;&#25968;&#25454;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">                    <span class="nam">cursor</span><span class="op">.</span><span class="nam">execute</span><span class="op">(</span><span class="str">f"SELECT * FROM {table_name} WHERE {where_clause}"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">                    <span class="nam">cursor</span><span class="op">.</span><span class="nam">execute</span><span class="op">(</span><span class="str">f"SELECT * FROM {table_name} WHERE {where_clause}"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">                    <span class="com"># &#21015;&#34920;&#25512;&#23548;&#24335;&#25343;&#21040;&#36820;&#22238;&#32467;&#26524;&#30340;&#21015;&#21517;</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">                    <span class="nam">columns</span> <span class="op">=</span> <span class="op">[</span><span class="nam">desc</span><span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="key">for</span> <span class="nam">desc</span> <span class="key">in</span> <span class="nam">cursor</span><span class="op">.</span><span class="nam">description</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">                    <span class="com"># cursor.fetchall()&#36820;&#22238;&#25152;&#26377;&#32467;&#26524;&#34892;,</span>&nbsp;</span><span class="r"></span></p>
@@ -225,13 +225,13 @@
     <p class="run"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">                <span class="nam">columns</span> <span class="op">=</span> <span class="op">[</span><span class="nam">desc</span><span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="key">for</span> <span class="nam">desc</span> <span class="key">in</span> <span class="nam">cursor</span><span class="op">.</span><span class="nam">description</span><span class="op">]</span>  <span class="com"># &#33719;&#21462;&#21015;&#21517;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">                <span class="nam">rows</span> <span class="op">=</span> <span class="op">[</span><span class="nam">dict</span><span class="op">(</span><span class="nam">zip</span><span class="op">(</span><span class="nam">columns</span><span class="op">,</span> <span class="nam">row</span><span class="op">)</span><span class="op">)</span> <span class="key">for</span> <span class="nam">row</span> <span class="key">in</span> <span class="nam">results</span><span class="op">[</span><span class="op">:</span><span class="num">15</span><span class="op">]</span><span class="op">]</span>  <span class="com"># &#33719;&#21462;&#21069;15&#26465;&#25968;&#25454;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">                <span class="key">if</span> <span class="key">not</span> <span class="nam">rows</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">                    <span class="key">return</span> <span class="str">"&#26597;&#35810;&#32467;&#26524;&#20026;&#31354;"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">                    <span class="key">return</span> <span class="str">"&#26597;&#35810;&#32467;&#26524;&#20026;&#31354;"</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">                <span class="key">return</span> <span class="str">f"&#26597;&#35810;&#21040; {len(rows)} &#26465;&#25968;&#25454;:\n"</span> <span class="op">+</span> <span class="str">"\n"</span><span class="op">.</span><span class="nam">join</span><span class="op">(</span><span class="str">" | "</span><span class="op">.</span><span class="nam">join</span><span class="op">(</span><span class="nam">str</span><span class="op">(</span><span class="nam">v</span><span class="op">)</span> <span class="key">for</span> <span class="nam">v</span> <span class="key">in</span> <span class="nam">r</span><span class="op">.</span><span class="nam">values</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="key">for</span> <span class="nam">r</span> <span class="key">in</span> <span class="nam">rows</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">            <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">                <span class="nam">conn</span><span class="op">.</span><span class="nam">commit</span><span class="op">(</span><span class="op">)</span>  <span class="com"># &#25552;&#20132;&#20107;&#21153;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">                <span class="key">return</span> <span class="str">f"&#25805;&#20316;&#25104;&#21151;&#65292;&#24433;&#21709; {cursor.rowcount} &#34892;&#12290;&#65288;&#24050;&#33258;&#21160;&#22791;&#20221;&#65292;&#21487;&#36890;&#36807;&#22238;&#28378;&#21151;&#33021;&#24674;&#22797;&#65289;"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="key">except</span> <span class="nam">Exception</span> <span class="key">as</span> <span class="nam">e</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">        <span class="key">return</span> <span class="str">f"SQL &#25191;&#34892;&#38169;&#35823;: {str(e)}"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">    <span class="key">except</span> <span class="nam">Exception</span> <span class="key">as</span> <span class="nam">e</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">        <span class="key">return</span> <span class="str">f"SQL &#25191;&#34892;&#38169;&#35823;: {str(e)}"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="key">finally</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">        <span class="nam">conn</span><span class="op">.</span><span class="nam">close</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -354,7 +354,7 @@
             <a class="nav" href="z_39795c679c66d98b_sql_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-05 23:15 +0800
+            created at 2026-05-05 23:29 +0800
         </p>
     </div>
 </footer>
