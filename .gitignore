@@ -24,7 +24,6 @@ coverage
 
 # Exclude .coverage files but keep coverage directories
 **/.coverage
-!fastapi/test_results/coverage/
 
 # nyc test coverage
 .nyc_output
