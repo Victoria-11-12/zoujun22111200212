@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Coverage for app\chains\chart_chains.py: 100%</title>
+    <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
+    <link rel="stylesheet" href="style_cb_5c747636.css" type="text/css">
+    <script src="coverage_html_cb_188fc9a4.js" defer></script>
+</head>
+<body class="pyfile">
+<header>
+    <div class="content">
+        <h1>
+            <span class="text">Coverage for </span><b>app&#8201;\&#8201;chains&#8201;\&#8201;chart_chains.py</b>:
+            <span class="pc_cov">100%</span>
+        </h1>
+        <aside id="help_panel_wrapper">
+            <input id="help_panel_state" type="checkbox">
+            <label for="help_panel_state">
+                <img id="keyboard_icon" src="keybd_closed_cb_900cfef5.png" alt="Show/hide keyboard shortcuts">
+            </label>
+            <div id="help_panel">
+                <p class="legend">Shortcuts on this page</p>
+                <div class="keyhelp">
+                    <p>
+                        <kbd>r</kbd>
+                        <kbd>m</kbd>
+                        <kbd>x</kbd>
+                        &nbsp; toggle line displays
+                    </p>
+                    <p>
+                        <kbd>j</kbd>
+                        <kbd>k</kbd>
+                        &nbsp; next/prev highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>0</kbd> &nbsp; (zero) top of page
+                    </p>
+                    <p>
+                        <kbd>1</kbd> &nbsp; (one) first highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>[</kbd>
+                        <kbd>]</kbd>
+                        &nbsp; prev/next file
+                    </p>
+                    <p>
+                        <kbd>u</kbd> &nbsp; up to the index
+                    </p>
+                    <p>
+                        <kbd>?</kbd> &nbsp; show/hide this help
+                    </p>
+                </div>
+            </div>
+        </aside>
+        <h2>
+            <span class="text">9 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">9<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
+        </h2>
+        <p class="text">
+            <a id="prevFileLink" class="nav" href="z_d9f436a9dd573baf_admin_chains_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a id="nextFileLink" class="nav" href="z_d9f436a9dd573baf_eval_chains_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:55 +0800
+        </p>
+        <aside class="hidden">
+            <button type="button" class="button_next_chunk" data-shortcut="j"></button>
+            <button type="button" class="button_prev_chunk" data-shortcut="k"></button>
+            <button type="button" class="button_top_of_page" data-shortcut="0"></button>
+            <button type="button" class="button_first_chunk" data-shortcut="1"></button>
+            <button type="button" class="button_prev_file" data-shortcut="["></button>
+            <button type="button" class="button_next_file" data-shortcut="]"></button>
+            <button type="button" class="button_to_index" data-shortcut="u"></button>
+            <button type="button" class="button_show_hide_help" data-shortcut="?"></button>
+        </aside>
+    </div>
+</header>
+<main id="source">
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="com"># &#22270;&#34920;&#38142;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="com"># &#21253;&#21547;&#32472;&#22270;&#24847;&#22270;&#21028;&#26029;&#38142;&#12289;&#19981;&#32472;&#22270;&#22238;&#22797;&#38142;&#12289;Python&#32472;&#22270;&#20195;&#30721;&#29983;&#25104;&#38142;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="key">from</span> <span class="nam">langchain_core</span><span class="op">.</span><span class="nam">prompts</span> <span class="key">import</span> <span class="nam">ChatPromptTemplate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="key">from</span> <span class="nam">langchain_core</span><span class="op">.</span><span class="nam">output_parsers</span> <span class="key">import</span> <span class="nam">StrOutputParser</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="key">from</span> <span class="nam">app</span><span class="op">.</span><span class="nam">config</span> <span class="key">import</span> <span class="nam">llm</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="com"># &#32472;&#22270;&#21028;&#26029;&#38142;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="nam">chart_intent_prompt</span> <span class="op">=</span> <span class="nam">ChatPromptTemplate</span><span class="op">.</span><span class="nam">from_messages</span><span class="op">(</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">    <span class="op">(</span><span class="str">'system'</span><span class="op">,</span> <span class="str">"""&#20320;&#26159;&#32472;&#22270;&#21161;&#25163;&#65292;&#21487;&#20197;&#26681;&#25454;&#29992;&#25143;&#36755;&#20837;&#21028;&#26029;&#26159;&#21542;&#38656;&#35201;&#32472;&#22270;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">&#27880;&#24847;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">- &#21482;&#33021;&#21028;&#26029;&#26159;&#21542;&#38656;&#35201;&#32472;&#22270;&#65292;&#19981;&#33021;&#32472;&#21046;&#22270;&#29255;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">- &#33509;&#29992;&#25143;&#36755;&#20837;&#20013;&#21253;&#21547;&#22270;&#29255;&#25551;&#36848;&#65292;&#38656;&#35201;&#21028;&#26029;&#26159;&#21542;&#38656;&#35201;&#32472;&#22270;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">- &#33509;&#29992;&#25143;&#36755;&#20837;&#20013;&#19981;&#21253;&#21547;&#22270;&#29255;&#25551;&#36848;&#65292;&#38656;&#35201;&#21028;&#26029;&#26159;&#21542;&#38656;&#35201;&#32472;&#22270;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">- &#22238;&#22797;&#31616;&#26126;&#30452;&#25509;&#65292;&#19981;&#35201;&#24223;&#35805;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">- &#33509;&#38656;&#35201;&#22238;&#32472;&#22270;&#65292;&#22238;&#22797;'IN_CHART'&#65292;&#33509;&#19981;&#38656;&#35201;&#22238;&#32472;&#22270;&#65292;&#22238;&#22797;'NOT_CHART'</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">- &#38656;&#35201;&#32472;&#22270;&#30340;&#24773;&#20917;&#65306;&#24110;&#25105;&#32472;&#21046;2013&#24180;&#30005;&#24433;&#30340;&#31080;&#25151;&#36235;&#21183;&#22270;&#65307;&#24110;&#25105;&#32472;&#21046;&#30005;&#24433;A&#21644;&#30005;&#24433;B&#30340;&#38647;&#36798;&#23545;&#27604;&#22270;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">- &#19981;&#38656;&#35201;&#32472;&#22270;&#30340;&#24773;&#20917;&#65306;&#24110;&#25105;&#26597;&#35810;2013&#24180;&#30005;&#24433;&#30340;&#31080;&#25151;&#25968;&#25454;&#65307;'&#20320;&#22909;'&#31561;&#26085;&#24120;&#32842;&#22825;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">"""</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="op">(</span><span class="str">'user'</span><span class="op">,</span> <span class="str">'{question}'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="nam">chart_intent_chain</span> <span class="op">=</span> <span class="nam">chart_intent_prompt</span> <span class="op">|</span> <span class="nam">llm</span> <span class="op">|</span> <span class="nam">StrOutputParser</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="com"># &#19981;&#32472;&#22270;&#30452;&#25509;&#22238;&#22797;&#38142;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="nam">chart_not_prompt</span> <span class="op">=</span> <span class="nam">ChatPromptTemplate</span><span class="op">.</span><span class="nam">from_messages</span><span class="op">(</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="op">(</span><span class="str">'system'</span><span class="op">,</span> <span class="str">'''</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="str">    &#26681;&#25454;&#29992;&#25143;&#30340;&#35831;&#27714;&#65292;&#20570;&#20986;&#30456;&#24212;&#30340;&#22238;&#22797;&#65292;&#24182;&#21578;&#30693;&#33258;&#24049;&#21482;&#33021;&#36827;&#34892;&#32472;&#22270;&#65292;&#26080;&#27861;&#36827;&#34892;&#20854;&#20182;&#25805;&#20316;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t"><span class="str">    &#22238;&#31572;&#35201;&#31036;&#35980;&#21451;&#22909;&#65292;&#19981;&#35201;&#24223;&#35805;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t"><span class="str">'''</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">    <span class="op">(</span><span class="str">'user'</span><span class="op">,</span> <span class="str">'{question}'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="nam">chart_not_chain</span> <span class="op">=</span> <span class="nam">chart_not_prompt</span> <span class="op">|</span> <span class="nam">llm</span> <span class="op">|</span> <span class="nam">StrOutputParser</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="com"># Python &#32472;&#22270;&#20195;&#30721;&#38142;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="nam">python_chart_prompt</span> <span class="op">=</span> <span class="nam">ChatPromptTemplate</span><span class="op">.</span><span class="nam">from_messages</span><span class="op">(</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="op">(</span><span class="str">"system"</span><span class="op">,</span> <span class="str">"""&#20320;&#26159;&#19968;&#20010; Python &#21487;&#35270;&#21270;&#24037;&#31243;&#24072;&#65292;&#26681;&#25454;&#29992;&#25143;&#38656;&#27714;&#21644;&#26597;&#35810;&#32467;&#26524;&#65292;&#20351;&#29992; pyecharts &#29983;&#25104;&#22270;&#34920;&#20195;&#30721;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="str">&#35201;&#27714;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t"><span class="str">1. &#21482;&#33021;&#20351;&#29992; pyecharts &#24211;&#65292;&#19981;&#33021;&#20351;&#29992;&#20854;&#20182;&#22270;&#34920;&#24211;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="str">2. &#19981;&#35201;&#20351;&#29992; render() &#20889;&#25991;&#20214;&#65292;&#24517;&#39035;&#29992; render_embed() &#23558;&#22270;&#34920;&#28210;&#26579;&#20026; HTML &#23383;&#31526;&#20018;&#65292;&#36171;&#20540;&#32473;&#21464;&#37327; CHART_HTML</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">3. &#26681;&#25454;&#29992;&#25143;&#38656;&#27714;&#36873;&#25321;&#21512;&#36866;&#30340;&#22270;&#34920;&#31867;&#22411;&#65288;&#26609;&#29366;&#22270;&#12289;&#25240;&#32447;&#22270;&#12289;&#39292;&#22270;&#12289;&#25955;&#28857;&#22270;&#12289;&#38647;&#36798;&#22270;&#31561;&#65289;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">4. &#19981;&#35201;&#20351;&#29992; set_global_options&#65292;&#19981;&#35201;&#22312; InitOpts &#20013;&#35774;&#32622; font_family&#65288;pyecharts 2.x &#19981;&#25903;&#25345;&#65289;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">5. &#36755;&#20986;&#26684;&#24335;&#65306;&#29992; ```python &#21644; ``` &#21253;&#35065;&#20195;&#30721;&#65292;&#19981;&#35201;&#36755;&#20986;&#20219;&#20309;&#20854;&#20182;&#25991;&#23383;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">6. &#20195;&#30721;&#26368;&#21518;&#20004;&#34892;&#24517;&#39035;&#26159;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">   CHART_HTML = chart.render_embed()</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="str">   print("CHART_HTML_START" + CHART_HTML + "CHART_HTML_END") </span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">&#22270;&#34920;&#35268;&#33539;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">7. X&#36724;&#21644;Y&#36724;&#24517;&#39035;&#35774;&#32622; name &#23646;&#24615;&#26174;&#31034;&#25968;&#25454;&#21547;&#20041;&#65292;&#20363;&#22914;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">   xaxis_opts=opts.AxisOpts(name="&#30005;&#24433;&#21517;&#31216;"), yaxis_opts=opts.AxisOpts(name="&#31080;&#25151;&#65288;&#32654;&#20803;&#65289;")</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">8. &#24517;&#39035;&#28155;&#21152;&#24037;&#20855;&#31665;&#65288;&#25903;&#25345;&#20445;&#23384;&#22270;&#29255;&#65289;&#65292;&#20363;&#22914;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">   toolbox_opts=opts.ToolboxOpts(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">    feature=opts.ToolBoxFeatureOpts(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">        save_as_image=opts.ToolBoxFeatureSaveAsImageOpts()</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">    )</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t"><span class="str">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="str">&#27880;&#24847;&#65306; save_as_image &#30340;&#20540;&#24517;&#39035;&#26159; ToolBoxFeatureSaveAsImageOpts() &#23454;&#20363;&#65292;&#19981;&#33021;&#20889; True&#65292;&#21542;&#21017;&#25353;&#38062;&#21487;&#33021;&#19981;&#26174;&#31034;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">9. &#22270;&#34920;&#26631;&#39064;&#36890;&#36807; set_global_opts &#30340; title_opts &#35774;&#32622;&#65288;&#27880;&#24847;&#65306;set_global_opts &#26159;&#22270;&#34920;&#23454;&#20363;&#30340;&#26041;&#27861;&#65292;&#19981;&#26159;&#29420;&#31435;&#20989;&#25968;&#65289;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">10. &#26609;&#29366;&#22270;/&#25240;&#32447;&#22270;&#25968;&#25454;&#36739;&#22810;&#26102;&#65292;X&#36724;&#26631;&#31614;&#20542;&#26012;&#26174;&#31034;&#65306;axislabel_opts=opts.LabelOpts(rotate=30)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="str">11.&#12304;&#37325;&#35201;&#12305;&#25152;&#26377;&#22270;&#34920;&#37117;&#24517;&#39035;&#21253;&#21547; toolbox_opts&#65292;&#21542;&#21017;&#29992;&#25143;&#26080;&#27861;&#19979;&#36733;&#22270;&#29255;&#65281;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">12.&#12304;&#37325;&#35201;&#12305;formatter &#26684;&#24335;&#35268;&#33539;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    - pyecharts &#30340; formatter &#19981;&#25903;&#25345; Python f-string &#35821;&#27861;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    - &#22914;&#38656;&#26684;&#24335;&#21270;&#22823;&#25968;&#23383;&#65288;&#22914;&#31080;&#25151;&#26174;&#31034;&#20026; 317.6M&#65289;&#65292;&#35831;&#22312; Python &#20013;&#39044;&#22788;&#29702;&#25968;&#25454;&#65292;&#23558;&#21407;&#25968;&#25454;&#38500;&#20197; 1000000&#65292;&#28982;&#21518;&#30452;&#25509;&#26174;&#31034;&#25968;&#20540;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">    - &#25110;&#32773;&#20351;&#29992; pyecharts.commons.utils.JsCode &#21253;&#35013; JavaScript &#20989;&#25968;&#65288;&#27880;&#24847;&#65306;JsCode&#20869;&#20351;&#29992;&#21452;&#33457;&#25324;&#21495;&#36716;&#20041;&#65289;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t"><span class="str">    - &#31105;&#27490;&#20351;&#29992; Python &#23383;&#31526;&#20018;&#26684;&#24335;&#21270;&#35821;&#27861;&#20316;&#20026; formatter &#20540;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t"><span class="str">     &#20197;&#19979;&#26159;&#19968;&#20010;&#27491;&#30830;&#30340;&#31034;&#20363;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="str">```python</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="str">from pyecharts import options as opts</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="str">from pyecharts.charts import Bar</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">chart = Bar()</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">chart.add_xaxis(["&#30005;&#24433;A", "&#30005;&#24433;B"])</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t"><span class="str">chart.add_yaxis("&#31080;&#25151;", [100, 200])</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t"><span class="str">chart.set_global_opts(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">    title_opts=opts.TitleOpts(title="&#31080;&#25151;&#23545;&#27604;"),</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">    xaxis_opts=opts.AxisOpts(name="&#30005;&#24433;"),</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">    yaxis_opts=opts.AxisOpts(name="&#31080;&#25151;&#65288;&#32654;&#20803;&#65289;"),</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t"><span class="str">    toolbox_opts=opts.ToolboxOpts(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="str">        feature=opts.ToolBoxFeatureOpts(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t"><span class="str">            save_as_image=opts.ToolBoxFeatureSaveAsImageOpts()   # &#20351;&#29992;&#23454;&#20363;&#23545;&#35937;&#65292;&#32780;&#38750; True</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="str">        )</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t"><span class="str">    )</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t"><span class="str">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t"><span class="str">CHART_HTML = chart.render_embed()</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="str">print("CHART_HTML_START" + CHART_HTML + "CHART_HTML_END")</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t"><span class="str">```</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="str">&#35831;&#25353;&#20197;&#19978;&#26684;&#24335;&#29983;&#25104;&#20195;&#30721;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t"><span class="str">"""</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="op">(</span><span class="str">"user"</span><span class="op">,</span> <span class="str">"&#29992;&#25143;&#38656;&#27714;&#65306;{question}\n\n&#26597;&#35810;&#32467;&#26524;&#65306;\n{data}\n\n{feedback}"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t"><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t"><span class="nam">python_chart_chain</span> <span class="op">=</span> <span class="nam">python_chart_prompt</span> <span class="op">|</span> <span class="nam">llm</span> <span class="op">|</span> <span class="nam">StrOutputParser</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+</main>
+<footer>
+    <div class="content">
+        <p>
+            <a class="nav" href="z_d9f436a9dd573baf_admin_chains_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a class="nav" href="z_d9f436a9dd573baf_eval_chains_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:55 +0800
+        </p>
+    </div>
+</footer>
+</body>
+</html>

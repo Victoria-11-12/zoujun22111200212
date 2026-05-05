@@ -21,6 +21,7 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 *.lcov
+!fastapi/test_results/coverage/
 
 # nyc test coverage
 .nyc_output

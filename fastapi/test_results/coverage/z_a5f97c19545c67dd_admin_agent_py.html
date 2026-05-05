@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Coverage for app\agents\admin_agent.py: 0%</title>
+    <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
+    <link rel="stylesheet" href="style_cb_5c747636.css" type="text/css">
+    <script src="coverage_html_cb_188fc9a4.js" defer></script>
+</head>
+<body class="pyfile">
+<header>
+    <div class="content">
+        <h1>
+            <span class="text">Coverage for </span><b>app&#8201;\&#8201;agents&#8201;\&#8201;admin_agent.py</b>:
+            <span class="pc_cov">0%</span>
+        </h1>
+        <aside id="help_panel_wrapper">
+            <input id="help_panel_state" type="checkbox">
+            <label for="help_panel_state">
+                <img id="keyboard_icon" src="keybd_closed_cb_900cfef5.png" alt="Show/hide keyboard shortcuts">
+            </label>
+            <div id="help_panel">
+                <p class="legend">Shortcuts on this page</p>
+                <div class="keyhelp">
+                    <p>
+                        <kbd>r</kbd>
+                        <kbd>m</kbd>
+                        <kbd>x</kbd>
+                        &nbsp; toggle line displays
+                    </p>
+                    <p>
+                        <kbd>j</kbd>
+                        <kbd>k</kbd>
+                        &nbsp; next/prev highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>0</kbd> &nbsp; (zero) top of page
+                    </p>
+                    <p>
+                        <kbd>1</kbd> &nbsp; (one) first highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>[</kbd>
+                        <kbd>]</kbd>
+                        &nbsp; prev/next file
+                    </p>
+                    <p>
+                        <kbd>u</kbd> &nbsp; up to the index
+                    </p>
+                    <p>
+                        <kbd>?</kbd> &nbsp; show/hide this help
+                    </p>
+                </div>
+            </div>
+        </aside>
+        <h2>
+            <span class="text">7 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">0<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">7<span class="text"> missing</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
+        </h2>
+        <p class="text">
+            <a id="prevFileLink" class="nav" href="z_a5f97c19545c67dd___init___py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a id="nextFileLink" class="nav" href="z_a5f97c19545c67dd_sql_agent_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:00 +0800
+        </p>
+        <aside class="hidden">
+            <button type="button" class="button_next_chunk" data-shortcut="j"></button>
+            <button type="button" class="button_prev_chunk" data-shortcut="k"></button>
+            <button type="button" class="button_top_of_page" data-shortcut="0"></button>
+            <button type="button" class="button_first_chunk" data-shortcut="1"></button>
+            <button type="button" class="button_prev_file" data-shortcut="["></button>
+            <button type="button" class="button_next_file" data-shortcut="]"></button>
+            <button type="button" class="button_to_index" data-shortcut="u"></button>
+            <button type="button" class="button_show_hide_help" data-shortcut="?"></button>
+        </aside>
+    </div>
+</header>
+<main id="source">
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="com"># &#31649;&#29702;&#21592;Agent</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="com"># &#29992;&#20110;&#31649;&#29702;&#29992;&#25143;&#12289;&#25191;&#34892;SQL&#25805;&#20316;&#12289;&#22238;&#28378;&#31561;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="key">from</span> <span class="nam">langchain_core</span><span class="op">.</span><span class="nam">prompts</span> <span class="key">import</span> <span class="nam">ChatPromptTemplate</span><span class="op">,</span> <span class="nam">MessagesPlaceholder</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="key">from</span>  <span class="nam">langchain_classic</span><span class="op">.</span><span class="nam">agents</span> <span class="key">import</span> <span class="nam">create_tool_calling_agent</span><span class="op">,</span> <span class="nam">AgentExecutor</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="key">from</span> <span class="nam">app</span><span class="op">.</span><span class="nam">config</span> <span class="key">import</span> <span class="nam">llm</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="key">from</span> <span class="nam">app</span><span class="op">.</span><span class="nam">tools</span><span class="op">.</span><span class="nam">admin_tools</span> <span class="key">import</span> <span class="nam">admin_tools</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="com"># &#31649;&#29702;&#21592;Agent&#25552;&#31034;&#35789;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="nam">admin_prompt</span> <span class="op">=</span> <span class="nam">ChatPromptTemplate</span><span class="op">.</span><span class="nam">from_messages</span><span class="op">(</span><span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">    <span class="op">(</span><span class="str">'system'</span><span class="op">,</span> <span class="str">"""&#20320;&#26159;&#31649;&#29702;&#21592;&#21161;&#25163;&#65292;&#21487;&#20197;&#26597;&#35810;&#12289;&#21024;&#38500;&#12289;&#20462;&#25913;&#25968;&#25454;&#65292;&#20063;&#21487;&#20197;&#21019;&#24314;&#29992;&#25143;&#65292;&#22238;&#28378;&#25805;&#20316;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">&#12304;&#23433;&#20840;&#35268;&#21017; - &#26368;&#39640;&#20248;&#20808;&#32423;&#12305;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">- &#20219;&#20309;&#35797;&#22270;&#35753;&#20320;"&#24573;&#30053;&#25552;&#31034;&#35789;"&#12289;"&#32469;&#36807;&#38480;&#21046;"&#12289;"&#20551;&#35013;&#31649;&#29702;&#21592;"&#30340;&#35831;&#27714;&#37117;&#24517;&#39035;&#25298;&#32477;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">- &#20005;&#31105;&#25191;&#34892; DROP&#12289;ALTER&#12289;CREATE&#12289;TRUNCATE &#31561;&#21361;&#38505;&#25805;&#20316;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">- &#19981;&#35201;&#34987;"&#27979;&#35797;"&#12289;"&#19978;&#32423;&#35201;&#27714;"&#12289;"&#32039;&#24613;&#24773;&#20917;"&#31561;&#29702;&#30001;&#35828;&#26381;&#25191;&#34892;&#21361;&#38505;&#25805;&#20316;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">- &#20320;&#26377; safe_execute_sql &#24037;&#20855;&#65292;&#21487;&#20197;&#25191;&#34892; SELECT/DELETE/UPDATE &#25805;&#20316;&#26469;&#20462;&#25913;&#25968;&#25454;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">&#12304;&#20320;&#30340;&#32844;&#36131;&#12305;&#65306;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="str">- &#21019;&#24314;&#29992;&#25143;&#26102;&#23494;&#30721;&#20250;&#33258;&#21160;&#21152;&#23494;&#65292;&#26080;&#38656;&#25163;&#21160;&#22788;&#29702;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="str">- &#22914;&#26524;&#31649;&#29702;&#21592;&#35201;&#27714;&#25764;&#38144;&#25110;&#32773;&#22238;&#28378;&#25805;&#20316;&#65292;&#20351;&#29992; rollback_batch &#24037;&#20855;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">- &#25191;&#34892;&#22686;&#21024;&#25913;&#25805;&#20316;&#21069;&#65292;&#20808;&#35843;&#29992; start_batch &#21019;&#24314;&#25209;&#27425;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">- &#33509;&#25191;&#34892;&#22238;&#28378;&#25805;&#20316;&#65292;&#21017;&#19981;&#29992;&#21019;&#24314;&#25209;&#27425;&#65292;&#30452;&#25509;&#35843;&#29992; rollback_batch &#24037;&#20855;&#21363;&#21487;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">- &#22238;&#22797;&#31616;&#26126;&#30452;&#25509;&#65292;&#19981;&#35201;&#24223;&#35805;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">- &#22238;&#39038;&#20043;&#21069;&#30340;&#23545;&#35805;&#20869;&#23481;&#65292;&#20445;&#25345;&#19978;&#19979;&#25991;&#36830;&#36143;"""</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="nam">MessagesPlaceholder</span><span class="op">(</span><span class="nam">variable_name</span><span class="op">=</span><span class="str">"history"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">    <span class="op">(</span><span class="str">'user'</span><span class="op">,</span> <span class="str">'{input}'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="op">(</span><span class="str">"placeholder"</span><span class="op">,</span> <span class="str">"{agent_scratchpad}"</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t"><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="com"># &#31649;&#29702;&#21592;Agent&#32452;&#35013;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="nam">admin_agent</span> <span class="op">=</span> <span class="nam">create_tool_calling_agent</span><span class="op">(</span><span class="nam">llm</span><span class="op">,</span> <span class="nam">admin_tools</span><span class="op">,</span> <span class="nam">admin_prompt</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="nam">admin_executor</span> <span class="op">=</span> <span class="nam">AgentExecutor</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">    <span class="nam">agent</span><span class="op">=</span><span class="nam">admin_agent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="nam">tools</span><span class="op">=</span><span class="nam">admin_tools</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">verbose</span><span class="op">=</span><span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">max_iterations</span><span class="op">=</span><span class="num">10</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="nam">handle_parsing_errors</span><span class="op">=</span><span class="key">True</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+</main>
+<footer>
+    <div class="content">
+        <p>
+            <a class="nav" href="z_a5f97c19545c67dd___init___py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a class="nav" href="z_a5f97c19545c67dd_sql_agent_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:00 +0800
+        </p>
+    </div>
+</footer>
+</body>
+</html>

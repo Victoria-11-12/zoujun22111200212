@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Coverage for app\history.py: 100%</title>
+    <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
+    <link rel="stylesheet" href="style_cb_5c747636.css" type="text/css">
+    <script src="coverage_html_cb_188fc9a4.js" defer></script>
+</head>
+<body class="pyfile">
+<header>
+    <div class="content">
+        <h1>
+            <span class="text">Coverage for </span><b>app&#8201;\&#8201;history.py</b>:
+            <span class="pc_cov">100%</span>
+        </h1>
+        <aside id="help_panel_wrapper">
+            <input id="help_panel_state" type="checkbox">
+            <label for="help_panel_state">
+                <img id="keyboard_icon" src="keybd_closed_cb_900cfef5.png" alt="Show/hide keyboard shortcuts">
+            </label>
+            <div id="help_panel">
+                <p class="legend">Shortcuts on this page</p>
+                <div class="keyhelp">
+                    <p>
+                        <kbd>r</kbd>
+                        <kbd>m</kbd>
+                        <kbd>x</kbd>
+                        &nbsp; toggle line displays
+                    </p>
+                    <p>
+                        <kbd>j</kbd>
+                        <kbd>k</kbd>
+                        &nbsp; next/prev highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>0</kbd> &nbsp; (zero) top of page
+                    </p>
+                    <p>
+                        <kbd>1</kbd> &nbsp; (one) first highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>[</kbd>
+                        <kbd>]</kbd>
+                        &nbsp; prev/next file
+                    </p>
+                    <p>
+                        <kbd>u</kbd> &nbsp; up to the index
+                    </p>
+                    <p>
+                        <kbd>?</kbd> &nbsp; show/hide this help
+                    </p>
+                </div>
+            </div>
+        </aside>
+        <h2>
+            <span class="text">12 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">12<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
+        </h2>
+        <p class="text">
+            <a id="prevFileLink" class="nav" href="z_5f5a17c013354698_config_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a id="nextFileLink" class="nav" href="z_5f5a17c013354698_logs_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:55 +0800
+        </p>
+        <aside class="hidden">
+            <button type="button" class="button_next_chunk" data-shortcut="j"></button>
+            <button type="button" class="button_prev_chunk" data-shortcut="k"></button>
+            <button type="button" class="button_top_of_page" data-shortcut="0"></button>
+            <button type="button" class="button_first_chunk" data-shortcut="1"></button>
+            <button type="button" class="button_prev_file" data-shortcut="["></button>
+            <button type="button" class="button_next_file" data-shortcut="]"></button>
+            <button type="button" class="button_to_index" data-shortcut="u"></button>
+            <button type="button" class="button_show_hide_help" data-shortcut="?"></button>
+        </aside>
+    </div>
+</header>
+<main id="source">
+    <p class="run"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="key">from</span> <span class="nam">langchain_core</span><span class="op">.</span><span class="nam">messages</span> <span class="key">import</span> <span class="nam">HumanMessage</span><span class="op">,</span> <span class="nam">AIMessage</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="com">#&#36825;&#20010;&#23383;&#20856;&#29992;&#20110;&#23384;&#20648;&#27599;&#20010;&#20250;&#35805;&#30340;&#23545;&#35805;&#21382;&#21490;&#65292;str&#26159;&#20250;&#35805;id&#65292;&#30001;&#21069;&#31471;&#29983;&#25104;&#24182;&#20256;&#36807;&#26469;&#65292;list&#26159;&#23545;&#35805;&#21382;&#21490;&#21015;&#34920;&#65292;&#37324;&#38754;&#26159;&#20803;&#32452;&#65292;&#27599;&#20010;&#20803;&#32452;&#21253;&#21547;&#29992;&#25143;&#28040;&#24687;&#21644;AI&#28040;&#24687;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="nam">conversation_history</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">list</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span><span class="op">}</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="com">#&#26368;&#22823;&#21382;&#21490;&#35760;&#24405;&#25968;&#65292;&#36229;&#36807;&#36825;&#20010;&#25968;&#30340;&#35760;&#24405;&#20250;&#34987;&#21024;&#38500;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="nam">MAX_HISTORY</span> <span class="op">=</span> <span class="num">10</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="com">#&#33719;&#21462;&#20250;&#35805;&#21382;&#21490;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="com">#&#26681;&#25454;&#20250;&#35805;id&#36820;&#22238;&#20250;&#35805;&#21382;&#21490;&#65292;&#22914;&#26524;&#20250;&#35805;id&#19981;&#23384;&#22312;&#65292;&#36820;&#22238;&#31354;&#21015;&#34920;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="key">def</span> <span class="nam">get_history</span><span class="op">(</span><span class="nam">session_id</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span> <span class="op">-></span> <span class="nam">list</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">    <span class="key">return</span> <span class="nam">conversation_history</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="nam">session_id</span><span class="op">,</span> <span class="op">[</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="com">#&#20445;&#23384;&#20250;&#35805;&#21382;&#21490;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="com">#&#26681;&#25454;&#20250;&#35805;id&#20445;&#23384;&#20250;&#35805;&#21382;&#21490;&#65292;&#22914;&#26524;&#20250;&#35805;id&#19981;&#23384;&#22312;&#65292;&#21019;&#24314;&#19968;&#20010;&#26032;&#30340;&#20250;&#35805;&#21382;&#21490;&#21015;&#34920;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">def</span> <span class="nam">save_history</span><span class="op">(</span><span class="nam">session_id</span><span class="op">:</span> <span class="nam">str</span><span class="op">,</span> <span class="nam">user_msg</span><span class="op">:</span> <span class="nam">str</span><span class="op">,</span> <span class="nam">ai_msg</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">    <span class="nam">history</span> <span class="op">=</span> <span class="nam">conversation_history</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="nam">session_id</span><span class="op">,</span> <span class="op">[</span><span class="op">]</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">    <span class="com">#langchain&#30340;&#28040;&#24687;&#26684;&#24335;&#65292;&#19981;&#33021;&#20256;&#23383;&#31526;&#20018;&#65292;&#24517;&#39035;&#29992;HumanMessage&#21644;AIMessage&#36827;&#34892;&#23553;&#35013;&#65292;&#21542;&#21017;&#20250;&#25253;&#38169;HumanMessage&#26159;&#29992;&#25143;&#28040;&#24687;&#65292;AIMessage&#26159;AI&#28040;&#24687;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">    <span class="nam">history</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">HumanMessage</span><span class="op">(</span><span class="nam">content</span><span class="op">=</span><span class="nam">user_msg</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">    <span class="nam">history</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">AIMessage</span><span class="op">(</span><span class="nam">content</span><span class="op">=</span><span class="nam">ai_msg</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">    <span class="com">#&#19968;&#36718;&#23545;&#35805;&#21253;&#21547;&#29992;&#25143;&#20449;&#24687;&#21644;AI&#20449;&#24687;&#65292;&#20445;&#23384;&#21313;&#36718;&#23545;&#35805;&#65292;&#25152;&#20197;&#26368;&#22823;&#21382;&#21490;&#35760;&#24405;&#25968;&#26159;2&#20493;&#30340;MAX_HISTORY</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">history</span><span class="op">)</span> <span class="op">></span> <span class="nam">MAX_HISTORY</span> <span class="op">*</span> <span class="num">2</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">        <span class="nam">history</span> <span class="op">=</span> <span class="nam">history</span><span class="op">[</span><span class="op">-</span><span class="nam">MAX_HISTORY</span> <span class="op">*</span> <span class="num">2</span><span class="op">:</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="nam">conversation_history</span><span class="op">[</span><span class="nam">session_id</span><span class="op">]</span> <span class="op">=</span> <span class="nam">history</span>&nbsp;</span><span class="r"></span></p>
+</main>
+<footer>
+    <div class="content">
+        <p>
+            <a class="nav" href="z_5f5a17c013354698_config_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a class="nav" href="z_5f5a17c013354698_logs_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
+            created at 2026-05-05 11:55 +0800
+        </p>
+    </div>
+</footer>
+</body>
+</html>
