@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for app\history.py: 100%</title>
+    <title>Coverage for app\history.py: 92%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_5c747636.css" type="text/css">
     <script src="coverage_html_cb_188fc9a4.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>app&#8201;\&#8201;history.py</b>:
-            <span class="pc_cov">100%</span>
+            <span class="pc_cov">92%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">12 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">12<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">11<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">1<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_5f5a17c013354698_logs_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-05 21:49 +0800
+            created at 2026-05-05 22:20 +0800
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -102,7 +102,7 @@
     <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">    <span class="nam">history</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">AIMessage</span><span class="op">(</span><span class="nam">content</span><span class="op">=</span><span class="nam">ai_msg</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">    <span class="com">#&#19968;&#36718;&#23545;&#35805;&#21253;&#21547;&#29992;&#25143;&#20449;&#24687;&#21644;AI&#20449;&#24687;&#65292;&#20445;&#23384;&#21313;&#36718;&#23545;&#35805;&#65292;&#25152;&#20197;&#26368;&#22823;&#21382;&#21490;&#35760;&#24405;&#25968;&#26159;2&#20493;&#30340;MAX_HISTORY</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">history</span><span class="op">)</span> <span class="op">></span> <span class="nam">MAX_HISTORY</span> <span class="op">*</span> <span class="num">2</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">        <span class="nam">history</span> <span class="op">=</span> <span class="nam">history</span><span class="op">[</span><span class="op">-</span><span class="nam">MAX_HISTORY</span> <span class="op">*</span> <span class="num">2</span><span class="op">:</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">        <span class="nam">history</span> <span class="op">=</span> <span class="nam">history</span><span class="op">[</span><span class="op">-</span><span class="nam">MAX_HISTORY</span> <span class="op">*</span> <span class="num">2</span><span class="op">:</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="nam">conversation_history</span><span class="op">[</span><span class="nam">session_id</span><span class="op">]</span> <span class="op">=</span> <span class="nam">history</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
@@ -113,7 +113,7 @@
             <a class="nav" href="z_5f5a17c013354698_logs_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.13.5">coverage.py v7.13.5</a>,
-            created at 2026-05-05 21:49 +0800
+            created at 2026-05-05 22:20 +0800
         </p>
     </div>
 </footer>
