@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
 COPY 配置文档/requirements.txt ./
 
 # 安装Python依赖
+RUN pip install pip==26.0.1
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码
