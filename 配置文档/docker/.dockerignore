@@ -1,0 +1,14 @@
+# 测试相关
+tests/
+测试文档/
+.coveragerc
+pytest.ini
+
+# 开发配置
+.gitignore
+
+# 文档图片（可选）
+相关流程图/
+
+# 旧文件
+app3.py

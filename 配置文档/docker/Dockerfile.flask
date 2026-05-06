@@ -1,6 +1,6 @@
 # ========================================
-# Flask 服务 Dockerfile
-# 算法服务：票房预测、黑马推荐、机器学习模型
+# Flask 算法服务 Dockerfile
+# 提供票房预测和机器学习功能
 # ========================================
 
 FROM python:3.10-slim
@@ -9,13 +9,15 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 安装系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     gcc \
-    libgomp1 \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Python 依赖
+# 复制依赖文件
 COPY Flask/requirements.txt ./
+
+# 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码和模型文件

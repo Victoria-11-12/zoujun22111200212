@@ -1,16 +1,18 @@
 # ========================================
-# Node.js 服务 Dockerfile
-# 业务逻辑服务：用户认证、日志管理、基础API
+# Node.js 业务服务 Dockerfile
+# 提供前端页面和基础业务API
 # ========================================
 
-FROM node:20-alpine
+FROM node:18-alpine
 
 # 设置工作目录
 WORKDIR /app
 
-# 安装依赖
+# 复制package.json和package-lock.json
 COPY Web_Node/package*.json ./
-RUN npm install --production
+
+# 安装依赖
+RUN npm install
 
 # 复制应用代码
 COPY Web_Node/ ./

@@ -1,6 +1,6 @@
 # ========================================
-# FastAPI 服务 Dockerfile
-# Agent 服务：AI对话、SQL查询、图表生成、LLM安全
+# FastAPI Agent 服务 Dockerfile
+# 提供AI对话、智能分析和可视化功能
 # ========================================
 
 FROM python:3.10-slim
@@ -9,12 +9,15 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # 安装系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Python 依赖
+# 复制依赖文件
 COPY 配置文档/requirements.txt ./
+
+# 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制应用代码
@@ -24,4 +27,4 @@ COPY fastapi/ ./
 EXPOSE 8000
 
 # 启动命令
-CMD ["uvicorn", "app3:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "main.py"]

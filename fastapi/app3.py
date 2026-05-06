@@ -1,3 +1,6 @@
+# 注意：这是重构前的代码
+# 重构后的代码位于 app/ 文件夹，通过 main.py 启动，功能与本文件一致
+
 import os
 
 # Windows Docker 连接配置，必须在 import docker 之前设置

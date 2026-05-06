@@ -17,7 +17,7 @@ osascript -e "tell application \"Terminal\" to do script \"cd '$SCRIPT_DIR/Flask
 sleep 3
 
 echo "[3/3] qidong FastAPI fuwu (duankou 8000)..."
-osascript -e "tell application \"Terminal\" to do script \"cd '$SCRIPT_DIR/fastapi' && uvicorn app3:app --reload\""
+osascript -e "tell application \"Terminal\" to do script \"cd '$SCRIPT_DIR/fastapi' && uvicorn main:app --reload\""
 
 echo ""
 echo "========================================"

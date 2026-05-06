@@ -1,0 +1,8 @@
+# Jupyter Notebook 训练代码
+*.ipynb
+
+# 数据文件（数据库已包含）
+data_all/
+
+# 文档图片
+相关流程图/

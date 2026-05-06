@@ -22,7 +22,7 @@ services:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./movie_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../movie_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - movie_network
     healthcheck:
@@ -33,7 +33,7 @@ services:
   # -------------------- Node.js 业务服务 --------------------
   web_node:
     build:
-      context: ..
+      context: ../..
       dockerfile: 配置文档/docker/Dockerfile.nodejs
     container_name: movie_web_node
     restart: unless-stopped
@@ -51,9 +51,9 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24}
       API_KEY: ${API_KEY:-}
       API_BASE: ${API_BASE:-https://api.deepseek.com/v1}
-      MODEL_NAME: ${MODEL_NAME:-deepseek-chat}
+      MODEL_NAME: ${MODEL_NAME:-deepseek-v4-flash}
     volumes:
-      - ../Web_Node:/app:ro
+      - ../../Web_Node:/app:ro
       - /app/node_modules
     networks:
       - movie_network
@@ -64,7 +64,7 @@ services:
   # -------------------- Flask 算法服务 --------------------
   flask:
     build:
-      context: ..
+      context: ../..
       dockerfile: 配置文档/docker/Dockerfile.flask
     container_name: movie_flask
     restart: unless-stopped
@@ -79,7 +79,7 @@ services:
       DB_USER_READONLY: ${DB_USER_READONLY:-readonly_user}
       DB_PASS_READONLY: ${DB_PASS_READONLY:-readonly_pass_123}
     volumes:
-      - ../Flask:/app:ro
+      - ../../Flask:/app:ro
     networks:
       - movie_network
     depends_on:
@@ -89,7 +89,7 @@ services:
   # -------------------- FastAPI Agent 服务 --------------------
   fastapi:
     build:
-      context: ..
+      context: ../..
       dockerfile: 配置文档/docker/Dockerfile.fastapi
     container_name: movie_fastapi
     restart: unless-stopped
@@ -107,33 +107,20 @@ services:
       DB_PASS_ANALYST: ${DB_PASS_ANALYST:-123456}
       API_KEY: ${API_KEY:-}
       API_BASE: ${API_BASE:-https://api.deepseek.com/v1}
-      MODEL_NAME: ${MODEL_NAME:-deepseek-chat}
+      MODEL_NAME: ${MODEL_NAME:-deepseek-v4-flash}
       EVAL_API_KEY: ${EVAL_API_KEY:-}
-      EVAL_MODEL_NAME: ${EVAL_MODEL_NAME:-deepseek-reasoner}
+      EVAL_MODEL_NAME: ${EVAL_MODEL_NAME:-deepseek-v4-flash}
       DOCKER_IMAGE: ${DOCKER_IMAGE:-pyecharts-sandbox}
       DOCKER_MEMORY_LIMIT: ${DOCKER_MEMORY_LIMIT:-256}
       DOCKER_TIMEOUT: ${DOCKER_TIMEOUT:-30}
     volumes:
-      - ../fastapi:/app:ro
+      - ../../fastapi:/app:ro
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - movie_network
     depends_on:
       mysql:
         condition: service_healthy
-
-  # -------------------- PyEcharts 沙箱服务（可选）--------------------
-  pyecharts-sandbox:
-    build:
-      context: ..
-      dockerfile: fastapi/Dockerfile
-    container_name: movie_pyecharts_sandbox
-    restart: unless-stopped
-    image: pyecharts-sandbox:latest
-    networks:
-      - movie_network
-    profiles:
-      - sandbox
 
 # -------------------- 数据卷 --------------------
 volumes:
