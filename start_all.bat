@@ -14,7 +14,7 @@ start "Flask Server" cmd /k "cd /d D:\bishe_zoujun\Flask && python app2.py"
 timeout /t 3 >nul
 
 echo [3/3] qidong FastAPI fuwu (duankou 8000)...
-start "FastAPI Server" cmd /k "cd /d D:\bishe_zoujun\fastapi && uvicorn app3:app --reload"
+start "FastAPI Server" cmd /k "cd /d D:\bishe_zoujun\fastapi && uvicorn main:app --reload"
 
 echo.
 echo ========================================

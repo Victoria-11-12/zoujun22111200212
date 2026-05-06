@@ -26,8 +26,6 @@ eval_lock = threading.Lock()
 def get_analyst_db_connection():
     """获取分析师数据库连接（只读权限），使用连接池"""
     conn = engine_analyst.raw_connection()
-    # pymysql 连接需要设置 cursorclass 才能返回字典格式
-    conn.cursorclass = pymysql.cursors.DictCursor
     return conn
 
 
@@ -46,7 +44,7 @@ def save_eval_result(source_table: str,
     """保存评估结果到 eval_results 表"""
     try:
         conn = get_analyst_db_connection()
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             if not created_at:
                 cursor.execute("SELECT NOW()")
                 result = cursor.fetchone()
@@ -148,7 +146,7 @@ async def start_evaluation(request: EvaluateRequest):
         conn = get_analyst_db_connection()
         all_records = []
 
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             date_filter = ""
             params = []
 
@@ -261,7 +259,7 @@ async def query_results(request: EvalQueryRequest):
     """查询评估结果"""
     conn = get_analyst_db_connection()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             where_clauses = []
             params = []
 
@@ -301,7 +299,7 @@ async def get_results_stats(
     """获取评估结果统计，用于前端画图展示"""
     try:
         conn = get_analyst_db_connection()
-        with conn.cursor() as cursor:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
             # 初始化查询条件
             where_clause = "WHERE er.score >= %s"
             params = [min_score]
