@@ -16,8 +16,6 @@ async def api_start_evaluation(request: EvaluateRequest):
     return await start_evaluation(request)
 
 
-
-
 @router.get("/evaluate/status")
 async def api_get_eval_status():
     """获取评估状态（兼容接口）"""

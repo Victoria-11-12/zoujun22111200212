@@ -16,6 +16,7 @@ timeout /t 3 >nul
 echo [3/3] qidong FastAPI fuwu (duankou 8000)...
 start "FastAPI Server" cmd /k "cd /d D:\bishe_zoujun\fastapi && uvicorn main:app --reload"
 
+@REM .\start_all.bat
 echo.
 echo ========================================
 echo suoyou fuwu yijing qidong
