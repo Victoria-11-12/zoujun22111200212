@@ -8,11 +8,14 @@ FROM python:3.10-slim
 # 设置工作目录
 WORKDIR /app
 
-# 安装系统依赖
+# 安装系统依赖（含 Git LFS，用于拉取真实模型文件）
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    git \
+    git-lfs \
+    && rm -rf /var/lib/apt/lists/* \
+    && git lfs install
 
 # 复制依赖文件
 COPY Flask/requirements.txt ./
@@ -20,8 +23,15 @@ COPY Flask/requirements.txt ./
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 复制 Git 仓库元数据（Git LFS 解析指针文件需要仓库信息）
+COPY .git ./.git
+COPY .gitattributes ./.gitattributes
+
 # 复制应用代码和模型文件
 COPY Flask/ ./
+
+# 拉取 Git LFS 管理的模型文件（替换指针文件为实际二进制文件）
+RUN git lfs pull && rm -rf .git
 
 # 暴露端口
 EXPOSE 5000
