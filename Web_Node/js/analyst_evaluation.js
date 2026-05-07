@@ -134,9 +134,12 @@
                 const progress = await response.json();
 
                 // 更新进度条
-                const percent = progress.progress || 0;
+                // 计算百分比：total>0 时计算，否则为 0
+                const total = progress.total || 0;
+                const completed = progress.completed || 0;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
                 progressFill.style.width = `${percent}%`;
-                progressText.textContent = `${percent}% (${progress.completed}/${progress.total})`;
+                progressText.textContent = `${completed}/${total}`;
 
                 // 评估完成
                 if (progress.status === 'done') {
