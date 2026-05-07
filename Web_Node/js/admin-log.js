@@ -1,7 +1,7 @@
 // 操作日志模块
 
 window.loadLogList = function() {
-    fetch('http://localhost:3000/api/admin/logs')
+    fetch('http://43.111.237.98:3000/api/admin/logs')
         .then(res => res.json())
         .then(res => {
             if (res.code === 200) {

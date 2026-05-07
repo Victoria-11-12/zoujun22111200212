@@ -47,7 +47,7 @@ function initCharts() {
 // 从后端加载数据概览
 async function loadOverviewData() {
     try {
-        const response = await fetch('http://localhost:3000/api/analyst/overview', {
+        const response = await fetch('http://43.111.237.98:3000/api/analyst/overview', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

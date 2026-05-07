@@ -1,7 +1,7 @@
 // 留言管理模块
 
 window.loadMessageList = function() {
-    fetch('http://localhost:3000/api/admin/messages')
+    fetch('http://43.111.237.98:3000/api/admin/messages')
         .then(res => res.json())
         .then(res => {
             if (res.code === 200) {
@@ -32,7 +32,7 @@ window.loadMessageList = function() {
 
 window.deleteMessage = function(id) {
     if (confirm('确定要删除该留言吗？')) {
-        fetch(`http://localhost:3000/api/admin/messages/${id}`, { method: 'DELETE' })
+        fetch(`http://43.111.237.98:3000/api/admin/messages/${id}`, { method: 'DELETE' })
             .then(res => res.json())
             .then(res => {
                 alert(res.msg);

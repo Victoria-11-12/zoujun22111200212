@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("大屏：开始同步基础数据...");
 
     // 1. 首先获取电影基础数据
-    fetch('http://localhost:3000/api/movies')
+    fetch('http://43.111.237.98:3000/api/movies')
         .then(res => res.json())
         .then(data => {
             window.movieData = data; // 统一使用 window. 对象
@@ -43,7 +43,7 @@ function loadAndRenderCharts() {
     console.log("大屏：开始请求位置布局配置...");
     
     // 添加时间戳防止缓存
-    fetch('http://localhost:3000/api/charts/config?t=' + Date.now())
+    fetch('http://43.111.237.98:3000/api/charts/config?t=' + Date.now())
         .then(res => res.json())
         .then(res => {
             if (res.code === 200) {

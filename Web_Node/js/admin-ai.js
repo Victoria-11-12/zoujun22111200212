@@ -78,7 +78,7 @@
 
             // 管理员后台直接使用管理员AI接口
             try {
-                const response = await fetch('http://localhost:8000/api/admin/ai/stream', {
+                const response = await fetch('http://43.111.237.98:8000/api/admin/ai/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '' })

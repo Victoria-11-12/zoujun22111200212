@@ -65,7 +65,7 @@
         console.log("正在提交注册信息:", { user });
 
         // 3. 发送请求给后端
-        fetch('http://localhost:3000/api/register', {
+        fetch('http://43.111.237.98:3000/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: user, password: pass })

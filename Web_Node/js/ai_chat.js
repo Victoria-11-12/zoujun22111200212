@@ -194,7 +194,7 @@
             // 异常处理
             try {
                 // 发起流式请求
-                const response = await fetch('http://localhost:8000/api/ai/stream', {
+                const response = await fetch('http://43.111.237.98:8000/api/ai/stream', {
                     // POST请求
                     method: 'POST',
                     // 设置请求头
