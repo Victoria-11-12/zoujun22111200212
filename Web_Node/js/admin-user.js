@@ -1,7 +1,7 @@
 // 用户管理模块
 
 window.loadUserList = function() {
-    fetch('http://43.111.237.98:3000/api/admin/users')
+    fetch('/api/admin/users')
         .then(res => res.json())
         .then(res => {
             if (res.code === 200) {
@@ -27,7 +27,7 @@ window.loadUserList = function() {
 
 window.deleteUser = function(id) {
     if (confirm('确定要删除该用户吗？')) {
-        fetch(`http://43.111.237.98:3000/api/admin/users/${id}`, { method: 'DELETE' })
+        fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
             .then(res => res.json())
             .then(res => {
                 alert(res.msg);
@@ -56,7 +56,7 @@ window.editUser = function(id, btn) {
     
     select.onchange = function() {
         const newRole = this.value;
-        fetch(`http://43.111.237.98:3000/api/admin/users/${id}`, {
+        fetch(`/api/admin/users/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: newRole })
@@ -82,7 +82,7 @@ document.querySelector('.add-btn').onclick = function() {
     const username = prompt("请输入新用户名:");
     if (!username) return;
     const password = '123456'; // 默认密码
-    fetch('http://43.111.237.98:3000/api/admin/users', {
+    fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password:'123456', role: 'user' })

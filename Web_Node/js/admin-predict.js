@@ -4,7 +4,7 @@
 async function loadDarkHorses() {
     const listContainer = document.getElementById('darkHorseList');
     try {
-        const response = await fetch('http://43.111.237.98:5000/api/flask/dark_horses');
+        const response = await fetch('http://localhost:5000/api/flask/dark_horses');
         const res = await response.json();
         
         if (res.code === 200) {
@@ -45,7 +45,7 @@ async function handleDeepPrediction(e) {
     resultValue.innerText = '计算中...';
 
     try {
-        const response = await fetch('http://43.111.237.98:5000/api/flask/predict_deep', {
+        const response = await fetch('http://localhost:5000/api/flask/predict_deep', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -73,7 +73,7 @@ async function loadROIComparison() {
     const myChart = echarts.init(chartDom);
     
     try {
-        const response = await fetch('http://43.111.237.98:5000/api/flask/roi_comparison');
+        const response = await fetch('http://localhost:5000/api/flask/roi_comparison');
         const res = await response.json();
         
         if (res.code === 200 && res.data.length > 0) {

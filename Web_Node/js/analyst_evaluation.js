@@ -1,7 +1,7 @@
 // 质量评估模块
 (function() {
     // API 基础URL
-    const API_BASE = 'http://43.111.237.98:8000';
+    const API_BASE = 'http://localhost:8000';
 
     // DOM 元素
     const startEvalBtn = document.getElementById('startEvalBtn');

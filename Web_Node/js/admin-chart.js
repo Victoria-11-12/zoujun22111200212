@@ -1,7 +1,7 @@
 // 图表更替模块
 
 function executeLoadConfigs() {
-    fetch('http://43.111.237.98:3000/api/charts/config?t=' + Date.now())
+    fetch('/api/charts/config?t=' + Date.now())
         .then(res => res.json())
         .then(res => {
             const container = document.getElementById('chartConfigBody');
@@ -133,7 +133,7 @@ window.handleTypeChange = function(posId, selectEl) {
 window.saveChartUpdate = function(posId) {
     const newTitle = document.getElementById('title-' + posId).value;
     const newType = document.getElementById('type-' + posId).value;
-    fetch('http://43.111.237.98:3000/api/charts/update', {
+    fetch('/api/charts/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ position_id: posId, chart_type: newType, chart_title: newTitle })
@@ -153,7 +153,7 @@ window.applyChartToPosition = function(chartKey, targetPos) {
     const opt = CHART_OPTIONS.find(o => o.value === chartKey);
     const defaultTitle = opt ? (opt.text.includes('：') ? opt.text.split('：')[1] : opt.text) : chartKey;
 
-    fetch('http://43.111.237.98:3000/api/charts/update', {
+    fetch('/api/charts/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

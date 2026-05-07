@@ -6,7 +6,7 @@ function ensureMovieData(callback) {
         return;
     }
 
-    fetch('http://43.111.237.98:3000/api/movies')
+    fetch('/api/movies')
         .then(res => {
             if (!res.ok) throw new Error('网络响应错误');
             return res.json();

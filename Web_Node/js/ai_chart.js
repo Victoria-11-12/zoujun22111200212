@@ -97,7 +97,7 @@
                 const aiMsgDiv = addChartMessage('🤔 思考中...', false);
 
                 try {
-                    const response = await fetch('http://43.111.237.98:8000/api/chart/generate', {
+                    const response = await fetch('http://localhost:8000/api/chart/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ message: message, sessionId: sessionId, username: localStorage.getItem('username') || '' })
