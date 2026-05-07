@@ -1,6 +1,6 @@
 import os
 
-# Windows Docker 连接配置，必须在 import docker 之前设置
+# Windows Docker 连接配置，必须在 import os
 os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
 
 from dotenv import load_dotenv
@@ -8,10 +8,22 @@ from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from sqlalchemy import create_engine
 import pymysql
+import httpx
 
 load_dotenv()
 
-# 一、llm和数据库初始化
+# 自定义 httpx 客户端，调大连接池避免密集调用时连接复用失败
+# 同步客户端用于同步调用
+_http_client = httpx.Client(
+    limits=httpx.Limits(max_keepalive_connections=20, max_connections=40, keepalive_expiry=30),
+    timeout=httpx.Timeout(60.0, connect=30.0)
+)
+# 异步客户端用于异步调用
+# keepalive_expiry 设短，使空闲连接在测试事件循环关闭前自动回收
+_http_async_client = httpx.AsyncClient(
+    limits=httpx.Limits(max_keepalive_connections=20, max_connections=40, keepalive_expiry=10),
+    timeout=httpx.Timeout(60.0, connect=30.0)
+)
 
 #llm模型初始化
 #兼容openAI的模型
@@ -20,7 +32,9 @@ llm = ChatOpenAI(
     openai_api_key=os.getenv('API_KEY'),
     openai_api_base=os.getenv('API_BASE'),
     temperature=0.1,  #模型温度，0-1之间，越大越随机，越小越确定
-    extra_body={"thinking": {"type": "disabled"}}  # 禁用思考模式
+    extra_body={"thinking": {"type": "disabled"}},  # 禁用思考模式
+    http_client=_http_client,
+    http_async_client=_http_async_client
 )
 
 #数据库初始化
@@ -57,7 +71,9 @@ eval_llm = ChatOpenAI(
     model=os.getenv('EVAL_MODEL_NAME'),
     api_key=os.getenv('EVAL_API_KEY'),
     base_url=os.getenv('API_BASE'),
-    temperature=0
+    temperature=0,
+    http_client=_http_client,
+    http_async_client=_http_async_client
 )
 
 # 分析师数据库连接（只读权限，用于质量评估）

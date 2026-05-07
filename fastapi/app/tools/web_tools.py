@@ -73,7 +73,7 @@ def baike_search_tool(movie_name: str) -> str:
     # 定义内部搜索函数，用于在独立线程中执行
     def _do_search():
         # 正则拦截：只允许中文、英文、数字、空格、常见标点
-        if not re.match(r'^[\w\u4e00-\u9fff\s\-\.·\(\)（）\!！\?？]+$', movie_name):
+        if not re.match(r'^[\w\u4e00-\u9fff\s\-\.·\(\)（）\!！\?？，。]+$', movie_name):
             return "电影名称包含非法字符，已拒绝执行"
 
         try:

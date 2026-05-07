@@ -12,8 +12,8 @@ class TestAnalystEndpoints:
     async def test_start_eval_task(self, async_client):
         payload = {
             "tables": ["user_chat_logs", "admin_chat_logs", "chart_generation_logs", "security_warning_logs"],
-            "start_date": "",
-            "end_date": ""
+            "start_date": "2026-05-06",
+            "end_date": "2026-05-06"
         }
         response = await async_client.post("/api/analyst/evaluate", json=payload)
         assert response.status_code == 200
@@ -24,7 +24,7 @@ class TestAnalystEndpoints:
     @pytest.mark.e2e
     @pytest.mark.asyncio
     async def test_get_eval_progress(self, async_client):
-        response = await async_client.get("/api/analyst/evaluate/progress")
+        response = await async_client.get("/api/analyst/evaluate/status")
         assert response.status_code == 200
         assert response.headers.get("content-type", "").startswith("application/json")
         data = response.json()

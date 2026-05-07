@@ -49,7 +49,7 @@ def save_eval_result(source_table: str,
                 cursor.execute("SELECT NOW()")
                 result = cursor.fetchone()
                 if result:
-                    created_at = result[0]
+                    created_at = result["NOW()"]
                     if hasattr(created_at, 'strftime'):
                         created_at = created_at.strftime('%Y-%m-%d %H:%M:%S')
 
