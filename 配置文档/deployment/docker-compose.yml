@@ -53,7 +53,7 @@ services:
       API_BASE: ${API_BASE:-https://api.deepseek.com/v1}
       MODEL_NAME: ${MODEL_NAME:-deepseek-v4-flash}
     volumes:
-      - ../../Web_Node:/app:ro
+      - ../../Web_Node:/app
       - /app/node_modules
     networks:
       - movie_network
