@@ -412,6 +412,27 @@ docker compose -f 配置文档/deployment/docker-compose.yml up -d flask
 
 **注意：** 不要使用 fine-grained token，这种不支持 Git LFS。
 
+### 问题 7：AI 百度搜索功能提示 Chrome 未找到
+
+**错误信息：**
+```
+打开百度百科失败：✗ Auto-launch failed: Chrome not found
+```
+
+**原因：** AI 的百度搜索功能需要调用 Chrome 浏览器，但用户电脑上没有安装 Chrome。
+
+**解决方案：**
+
+**在用户的电脑上安装 Chrome 浏览器**：
+
+1. 访问 https://www.google.com/chrome/
+2. 下载并安装 Chrome 浏览器
+3. 刷新网页，重新尝试百度搜索功能
+
+或者使用 Edge、Firefox 等其他浏览器（需要配置 `agent-browser` 支持）。
+
+**注意：** 此功能不影响 AI 对话、数据可视化等其他功能，只在调用百度搜索时需要。
+
 ---
 
 ## 下一步
