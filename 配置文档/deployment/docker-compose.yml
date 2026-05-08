@@ -16,14 +16,13 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASS:-123456}
       MYSQL_DATABASE: ${DB_NAME:-movie_db}
-      MYSQL_USER: ${DB_USER_READONLY:-readonly_user}
-      MYSQL_PASSWORD: ${DB_PASS_READONLY:-readonly_pass_123}
       TZ: Asia/Shanghai
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../movie_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../movie_db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../init-users.sql:/docker-entrypoint-initdb.d/02-init-users.sql:ro
     networks:
       - movie_network
     healthcheck:
