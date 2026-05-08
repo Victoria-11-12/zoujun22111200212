@@ -12,6 +12,7 @@ services:
     image: mysql:8.0
     container_name: movie_mysql
     restart: unless-stopped
+    command: --lower_case_table_names=1
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASS:-123456}
       MYSQL_DATABASE: ${DB_NAME:-movie_db}
