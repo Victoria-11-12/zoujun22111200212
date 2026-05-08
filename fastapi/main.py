@@ -1,6 +1,8 @@
 import os
+import sys
 
-os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
+if sys.platform == 'win32':
+    os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
