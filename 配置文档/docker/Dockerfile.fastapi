@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     nodejs \
     npm \
-    &amp;&amp; rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # 全局安装 agent-browser 命令行工具
 RUN npm install -g agent-browser
