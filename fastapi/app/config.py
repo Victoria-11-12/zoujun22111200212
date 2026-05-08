@@ -1,7 +1,9 @@
 import os
+import sys
 
 # Windows Docker 连接配置，必须在 import os
-os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
+if sys.platform == 'win32':
+    os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
