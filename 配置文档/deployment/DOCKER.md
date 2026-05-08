@@ -308,7 +308,7 @@ docker compose restart
 }
 ```
 
-### 问题5：内存不足
+### 问题 5：内存不足
 
 **现象：** 容器频繁重启或启动失败
 
@@ -317,6 +317,100 @@ docker compose restart
 2. 增加 Docker Desktop 内存限制：
    - Windows/macOS: Docker Desktop -> Settings -> Resources -> Memory
    - 设置为 4GB 或更高
+
+### 问题 6：Flask 模型加载失败（AttributeError: 'NoneType' object has no attribute 'predict'）
+
+**错误信息：**
+```
+随机森林模型加载失败：118
+LightGBM 模型加载失败：118
+AttributeError: 'NoneType' object has no attribute 'predict'
+```
+
+**原因：** 机器学习模型文件（`.pkl`）使用 Git LFS 管理，服务器拉取代码时只下载了指针文件（128 字节），而非真实模型文件（3MB+）。
+
+**解决方案：**
+
+#### 方案 A：在服务器上配置 Git LFS（推荐）
+
+```bash
+# 1. 进入项目目录
+cd /root/zoujun22111200212
+
+# 2. 安装 Git LFS（CentOS/RHEL）
+curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | sudo bash
+sudo yum install -y git-lfs
+
+# Ubuntu/Debian 使用：
+# curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+# sudo apt-get install -y git-lfs
+
+# 3. 初始化 Git LFS
+git lfs install
+
+# 4. 配置 GitHub 认证（使用 Personal Access Token）
+git remote set-url origin https://YOUR_GITHUB_TOKEN@github.com/Victoria-11-12/zoujun22111200212.git
+
+# 5. 拉取 LFS 管理的模型文件
+git lfs pull
+
+# 6. 确认模型文件已正确下载（应该从 128 字节变成 3MB 左右）
+ls -lh Flask/*.pkl
+
+# 7. 重新构建 Flask 镜像
+docker compose -f 配置文档/deployment/docker-compose.yml build --no-cache flask
+
+# 8. 重启 Flask 容器
+docker compose -f 配置文档/deployment/docker-compose.yml up -d flask
+
+# 9. 查看日志确认模型加载成功
+docker logs movie_flask -f
+```
+
+看到以下日志表示成功：
+```
+随机森林模型加载成功！
+LightGBM 模型加载成功！
+```
+
+#### 方案 B：在本地构建镜像后推送到服务器
+
+```bash
+# 1. 在本地电脑拉取 LFS 文件
+git lfs pull
+
+# 2. 确认模型文件已下载
+ls -lh Flask/*.pkl
+
+# 3. 构建 Flask 镜像
+docker build -t movie_flask -f 配置文档/docker/Dockerfile.flask .
+
+# 4. 导出镜像为 tar 文件
+docker save movie_flask > flask_image.tar
+
+# 5. 上传到服务器（使用 scp）
+scp flask_image.tar root@服务器 IP:/root/
+
+# 6. 在服务器上导入镜像
+docker load < flask_image.tar
+
+# 7. 重启 Flask 容器
+docker compose -f 配置文档/deployment/docker-compose.yml up -d flask
+```
+
+#### 获取 GitHub Personal Access Token
+
+1. 登录 https://github.com
+2. 点击右上角头像 → Settings
+3. 左侧 Developer settings → Personal access tokens → Tokens (classic)
+4. 点击 **Generate new token (classic)**
+5. Token name: 填写描述（如 `服务器`）
+6. Expiration: 选择过期时间（如 90 天）
+7. **必须勾选 `repo` 权限**（包含所有子权限）
+8. 点击 **Generate token**
+9. 复制生成的 token（以 `ghp_` 开头，立即保存，只显示一次）
+
+**注意：** 不要使用 fine-grained token，这种不支持 Git LFS。
 
 ---
 
