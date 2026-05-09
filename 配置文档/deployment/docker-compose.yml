@@ -52,6 +52,9 @@ services:
       API_KEY: ${API_KEY:-}
       API_BASE: ${API_BASE:-https://api.deepseek.com/v1}
       MODEL_NAME: ${MODEL_NAME:-deepseek-v4-flash}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FASTAPI_URL: ${FASTAPI_URL:-http://localhost:8000}
+      FLASK_URL: ${FLASK_URL:-http://localhost:5000}
     volumes:
       - ../../Web_Node:/app
       - /app/node_modules
@@ -113,6 +116,7 @@ services:
       DOCKER_IMAGE: ${DOCKER_IMAGE:-pyecharts-sandbox}
       DOCKER_MEMORY_LIMIT: ${DOCKER_MEMORY_LIMIT:-256}
       DOCKER_TIMEOUT: ${DOCKER_TIMEOUT:-30}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     volumes:
       - ../../fastapi:/app:ro
       - /var/run/docker.sock:/var/run/docker.sock
