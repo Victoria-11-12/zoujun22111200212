@@ -15,9 +15,11 @@ app.use(express.json());
 
 // 动态注入环境变量配置，供前端 JS 读取
 // 优先从环境变量读取，未配置时回退到本地地址（方便 Docker 部署）
+// Nginx 模式下返回空字符串，前端拼接后得到 /api/... 相对路径
 app.get('/js/config.js', (req, res) => {
-    const fastapiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
-    const flaskUrl = process.env.FLASK_URL || 'http://localhost:5000';
+    const nginxMode = process.env.NGINX_MODE === 'true';
+    const fastapiUrl = nginxMode ? '' : (process.env.FASTAPI_URL || 'http://localhost:8000');
+    const flaskUrl = nginxMode ? '' : (process.env.FLASK_URL || 'http://localhost:5000');
     res.type('application/javascript');
     res.send(`window.__CONFIG__ = window.__CONFIG__ || {
     FASTAPI_URL: "${fastapiUrl}",
