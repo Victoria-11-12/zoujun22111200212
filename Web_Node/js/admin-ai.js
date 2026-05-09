@@ -1,4 +1,7 @@
 (function() {
+    // 从环境变量配置读取 FastAPI 地址，未配置时回退到本地地址
+    const _FASTAPI_URL = (window.__CONFIG__ && window.__CONFIG__.FASTAPI_URL) || 'http://localhost:8000';
+
     // 管理员后台AI助手专用
     const aiChatContainer = document.getElementById('adminAiChatContainer');
     const sendAiMessage = document.getElementById('sendAdminAiMessage');
@@ -78,7 +81,7 @@
 
             // 管理员后台直接使用管理员AI接口
             try {
-                const response = await fetch('http://43.111.237.98:8000/api/admin/ai/stream', {
+                const response = await fetch(_FASTAPI_URL + '/api/admin/ai/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message, sessionId, username: localStorage.getItem('username') || '' })

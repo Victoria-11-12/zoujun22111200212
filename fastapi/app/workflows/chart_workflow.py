@@ -162,9 +162,11 @@ async def _node_pyecharts_sandbox(state: ChartGraphState) -> ChartGraphState:
 
         chart_html = match.group(1)
 
+        # 从环境变量读取 ECharts 脚本地址，支持开源项目安全配置
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset=\"utf-8\">
-<script src=\"http://localhost:3000/js/echarts.js\"><\/script>
+<script src=\"{frontend_url}/js/echarts.js\"><\/script>
 <style>
 html,body{{margin:0;padding:0;width:100%;height:100%;}}
 div[_echarts_instance_]{{width:100%!important;height:100%!important;}}

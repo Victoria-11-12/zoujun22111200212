@@ -15,14 +15,13 @@ load_dotenv()
 
 app = FastAPI(
     title="电影数据分析系统",
-    description="基于LangChain和LangGraph的智能电影数据查询与可视化系统",
+    description="基于 LangChain 和 LangGraph 的智能电影数据查询与可视化系统",
     version="1.0.0"
 )
 
-ALLOWED_ORIGINS = [
-    "http://43.111.237.98:3000",
-    "http://localhost:3000",
-]
+# 从环境变量读取
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+ALLOWED_ORIGINS = [FRONTEND_URL, "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,

@@ -1296,9 +1296,11 @@ async def _node_pyecharts_sandbox(state: ChartGraphState) -> ChartGraphState:
 
         # 保留原始页面嵌入包装器 + echarts.js 链接
         # 将图表 HTML 包装成完整页面，确保正确显示和响应式调整
+        # 从环境变量读取 ECharts 脚本地址，支持开源项目安全配置
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset=\"utf-8\">
-<script src=\"http://localhost:3000/js/echarts.js\"><\/script>  <!-- 引入 ECharts 库 -->
+<script src=\"{frontend_url}/js/echarts.js\"><\/script>  <!-- 引入 ECharts 库 -->
 <style>
 html,body{{margin:0;padding:0;width:100%;height:100%;}}  <!-- 移除默认边距，占满窗口 -->
 div[_echarts_instance_]{{width:100%!important;height:100%!important;}}  <!-- 强制图表容器占满 100% -->

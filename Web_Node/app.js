@@ -12,6 +12,19 @@ app.use(cors());
 
 //解析 JSON 格式的请求体，否则无法获取前端传来的用户名和密码
 app.use(express.json());
+
+// 动态注入环境变量配置，供前端 JS 读取
+// 优先从环境变量读取，未配置时回退到本地地址（方便 Docker 部署）
+app.get('/js/config.js', (req, res) => {
+    const fastapiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+    const flaskUrl = process.env.FLASK_URL || 'http://localhost:5000';
+    res.type('application/javascript');
+    res.send(`window.__CONFIG__ = window.__CONFIG__ || {
+    FASTAPI_URL: "${fastapiUrl}",
+    FLASK_URL: "${flaskUrl}"
+};`);
+});
+
 app.use(express.static('./'));
 
 // 数据库连接配置
@@ -476,7 +489,15 @@ app.get('/api/analyst/export', (req, res) => {
 });
 
 app.listen(3000, () => {
-    console.log('--------------------------------------');
-    console.log('后端启动成功');
-    console.log('--------------------------------------');
+    console.log('========================================');
+    console.log('  电影数据分析系统 - 前端页面地址');
+    console.log('========================================');
+    console.log('  大屏首页:     http://localhost:3000/demo.html');
+    console.log('  登录页面:     http://localhost:3000/login.html');
+    console.log('  后台管理:     http://localhost:3000/admin.html');
+    console.log('  评估平台:     http://localhost:3000/analyst.html');
+    console.log('========================================');
+    console.log('  默认账号: admin3 / 123456 (管理员)');
+    console.log('            user1 / 123456 (普通用户)');
+    console.log('========================================');
 });
