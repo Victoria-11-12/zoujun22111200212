@@ -2,6 +2,7 @@
 # 使用LangGraph实现图表生成的多节点流程
 
 import re
+import os
 import docker
 from typing import List, TypedDict
 from langgraph.graph import StateGraph, END
