@@ -419,11 +419,20 @@ docker compose -f 配置文档/deployment/docker-compose.yml up -d flask
 打开百度百科失败：✗ Auto-launch failed: Chrome not found
 ```
 
-**原因：** AI 的百度搜索功能需要调用 Chrome 浏览器，但用户电脑上没有安装 Chrome。
+**原因：** AI 的百度搜索功能需要调用 Chrome 浏览器，但当前环境中没有安装 Chrome。
+
+**为什么 Docker 镜像中没有预装 Chrome：**
+
+Google Chrome 浏览器体积较大（约 300-400MB），如果打包到镜像中，会导致：
+1. 镜像体积显著增大，构建和下载时间变长
+2. 每次部署都需要传输更大的镜像文件
+3. 并非所有用户都需要百度搜索功能，强制安装会增加不必要的资源占用
+
+因此，Chrome 浏览器采用按需安装的方式，由用户在宿主机上自行安装。
 
 **解决方案：**
 
-**在用户的电脑上安装 Chrome 浏览器**：
+**在宿主机上安装 Chrome 浏览器**：
 
 1. 访问 https://www.google.com/chrome/
 2. 下载并安装 Chrome 浏览器
