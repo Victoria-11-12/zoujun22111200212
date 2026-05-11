@@ -1,6 +1,6 @@
 (function() {
         // 从环境变量配置读取 FastAPI 地址，未配置时回退到本地地址
-        const _FASTAPI_URL = (window.__CONFIG__ && window.__CONFIG__.FASTAPI_URL) || 'http://localhost:8000';
+        const _FASTAPI_URL = (window.__CONFIG__ && window.__CONFIG__.FASTAPI_URL !== undefined) ? window.__CONFIG__.FASTAPI_URL : 'http://localhost:8000';
 
         const chartModal = document.getElementById('chartModal');
         const chartBtn = document.querySelector('.chart-btn');

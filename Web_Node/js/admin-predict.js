@@ -1,7 +1,7 @@
 // 票房预测模块
 
 // 从环境变量配置读取 Flask 地址，未配置时回退到本地地址
-const _FLASK_URL = (window.__CONFIG__ && window.__CONFIG__.FLASK_URL) || 'http://localhost:5000';
+const _FLASK_URL = (window.__CONFIG__ && window.__CONFIG__.FLASK_URL !== undefined) ? window.__CONFIG__.FLASK_URL : 'http://localhost:5000';
 
 // 获取黑马数据并渲染表格
 async function loadDarkHorses() {

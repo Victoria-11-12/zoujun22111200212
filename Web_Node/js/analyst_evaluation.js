@@ -1,7 +1,7 @@
 // 质量评估模块
 (function() {
     // API 基础URL，从环境变量配置读取，未配置时回退到本地地址
-    const API_BASE = (window.__CONFIG__ && window.__CONFIG__.FASTAPI_URL) || 'http://localhost:8000';
+    const API_BASE = (window.__CONFIG__ && window.__CONFIG__.FASTAPI_URL !== undefined) ? window.__CONFIG__.FASTAPI_URL : 'http://localhost:8000';
 
     // DOM 元素
     const startEvalBtn = document.getElementById('startEvalBtn');

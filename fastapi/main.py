@@ -20,8 +20,10 @@ app = FastAPI(
 )
 
 # 从环境变量读取
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-ALLOWED_ORIGINS = [FRONTEND_URL, "http://localhost:3000"]
+# Nginx 代理模式，前端通过 http://localhost 访问
+# FRONTEND_URL 环境变量用于生产环境自定义域名
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost')
+ALLOWED_ORIGINS = [FRONTEND_URL, "http://localhost"]
 
 app.add_middleware(
     CORSMiddleware,
