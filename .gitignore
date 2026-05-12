@@ -184,3 +184,4 @@ venv.bak/
 *.xlk
 *.~vsd
 *.~vsdx
+.claude
