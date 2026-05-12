@@ -20,6 +20,71 @@
     // 基于时间戳和随机数生成sessionId
     const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+    // ==================== 【2.5】AI聊天使用次数限制配置 ====================
+    // 定义不同角色的AI聊天使用次数上限，-1表示无限制
+    const CHAT_LIMITS = {
+        'user': 50,      // 普通用户：50次
+        'analyst': 100,  // 分析师：100次
+        'admin': -1      // 管理员：无限制
+    };
+    // 24小时的时间戳（毫秒）
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+    /**
+     * 获取当前用户的AI聊天使用数据（包含次数和最后重置时间）
+     * 如果超过24小时未重置，自动重置次数
+     * @returns {Object} 包含count和lastReset的对象
+     */
+    function getChatUsageData() {
+        const username = localStorage.getItem('username');
+        if (!username) return { count: 0, lastReset: Date.now() };
+        const key = 'ai_chat_usage_' + username;
+        const stored = localStorage.getItem(key);
+        if (!stored) {
+            return { count: 0, lastReset: Date.now() };
+        }
+        try {
+            const data = JSON.parse(stored);
+            const now = Date.now();
+            // 检查是否超过24小时，超过则重置
+            if (now - data.lastReset > ONE_DAY_MS) {
+                const newData = { count: 0, lastReset: now };
+                localStorage.setItem(key, JSON.stringify(newData));
+                return newData;
+            }
+            return data;
+        } catch (e) {
+            // 解析失败时返回默认值
+            return { count: 0, lastReset: Date.now() };
+        }
+    }
+
+    /**
+     * 增加AI聊天使用次数
+     * 每次发送消息成功后调用
+     */
+    function incrementChatUsage() {
+        const username = localStorage.getItem('username');
+        if (!username) return;
+        const key = 'ai_chat_usage_' + username;
+        const data = getChatUsageData();
+        data.count += 1;
+        localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    /**
+     * 检查AI聊天使用限制
+     * @returns {Object} 包含allowed(是否允许)、current(当前次数)、limit(上限)的对象
+     */
+    function checkChatLimit() {
+        const role = localStorage.getItem('role') || 'user';
+        const limit = CHAT_LIMITS[role] || CHAT_LIMITS['user'];
+        // -1表示无限制
+        if (limit === -1) return { allowed: true, current: 0, limit: -1 };
+        const data = getChatUsageData();
+        return { allowed: data.count < limit, current: data.count, limit: limit };
+    }
+
 
 
     // ==================== 【3】打开AI助手弹窗 ====================
@@ -31,6 +96,12 @@
             // 未登录提示
             if (!username) {
                 alert('请先登录后再使用 AI 助手');
+                return;
+            }
+            // 检查使用次数限制
+            const limitCheck = checkChatLimit();
+            if (!limitCheck.allowed) {
+                alert('今日AI聊天次数已用完（上限' + limitCheck.limit + '次），请24小时后再试');
                 return;
             }
             // 显示弹窗
@@ -242,6 +313,8 @@
                             if (data === '[DONE]') {
                                 // 结束消息渲染
                                 endAIMessage();
+                                // 消息成功接收后增加使用次数
+                                incrementChatUsage();
                             } else {
                                 // 尝试解析JSON
                                 try {

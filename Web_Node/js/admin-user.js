@@ -26,20 +26,39 @@ window.loadUserList = function() {
 };
 
 window.deleteUser = function(id) {
-    if (confirm('确定要删除该用户吗？')) {
-        fetch(`/admin/users/${id}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(res => {
-                alert(res.msg);
-                loadUserList();
-            });
-    }
+    // 先获取用户信息判断角色
+    fetch('/admin/users')
+        .then(res => res.json())
+        .then(res => {
+            if (res.code === 200) {
+                const user = res.data.find(u => u.id === id);
+                // 校验：不能删除admin用户
+                if (user && user.role === 'admin') {
+                    alert('权限不足：无法删除管理员用户');
+                    return;
+                }
+                if (confirm('确定要删除该用户吗？')) {
+                    fetch(`/admin/users/${id}`, { method: 'DELETE' })
+                        .then(res => res.json())
+                        .then(res => {
+                            alert(res.msg);
+                            loadUserList();
+                        });
+                }
+            }
+        });
 };
 
 window.editUser = function(id, btn) {
     const tr = btn.closest('tr');
     const roleCell = tr.querySelector('td:nth-child(3)');
     const currentRole = roleCell.dataset.role || roleCell.textContent.trim();
+    
+    // 校验：不能修改admin用户的角色
+    if (currentRole === 'admin') {
+        alert('权限不足：无法修改管理员用户');
+        return;
+    }
     
     if (roleCell.querySelector('select')) return;
     

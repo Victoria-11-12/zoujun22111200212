@@ -143,10 +143,20 @@ app.get('/admin/users', (req, res) => {
 // ------------------- 管理员：删除用户 -------------------
 app.delete('/admin/users/:id', (req, res) => {
     const id = req.params.id;
-    const sql = 'DELETE FROM users WHERE id = ?';
-    db.query(sql, [id], (err, results) => {
-        if (err) return res.send({ code: 500, msg: '删除失败' });
-        res.send({ code: 200, msg: '删除成功' });
+    // 先查询用户角色，禁止删除admin用户
+    const checkSql = 'SELECT role FROM users WHERE id = ?';
+    db.query(checkSql, [id], (err, results) => {
+        if (err) return res.send({ code: 500, msg: '查询用户失败' });
+        if (results.length === 0) return res.send({ code: 404, msg: '用户不存在' });
+        // 校验：不能删除admin用户
+        if (results[0].role === 'admin') {
+            return res.send({ code: 403, msg: '权限不足：无法删除管理员用户' });
+        }
+        const sql = 'DELETE FROM users WHERE id = ?';
+        db.query(sql, [id], (err, results) => {
+            if (err) return res.send({ code: 500, msg: '删除失败' });
+            res.send({ code: 200, msg: '删除成功' });
+        });
     });
 });
 
@@ -166,10 +176,20 @@ app.post('/admin/users', (req, res) => {
 app.put('/admin/users/:id', (req, res) => {
     const id = req.params.id;
     const { role } = req.body; // 这里以修改角色为例
-    const sql = 'UPDATE users SET role = ? WHERE id = ?';
-    db.query(sql, [role, id], (err, results) => {
-        if (err) return res.send({ code: 500, msg: '修改失败' });
-        res.send({ code: 200, msg: '修改成功' });
+    // 先查询用户角色，禁止修改admin用户
+    const checkSql = 'SELECT role FROM users WHERE id = ?';
+    db.query(checkSql, [id], (err, results) => {
+        if (err) return res.send({ code: 500, msg: '查询用户失败' });
+        if (results.length === 0) return res.send({ code: 404, msg: '用户不存在' });
+        // 校验：不能修改admin用户的角色
+        if (results[0].role === 'admin') {
+            return res.send({ code: 403, msg: '权限不足：无法修改管理员用户' });
+        }
+        const sql = 'UPDATE users SET role = ? WHERE id = ?';
+        db.query(sql, [role, id], (err, results) => {
+            if (err) return res.send({ code: 500, msg: '修改失败' });
+            res.send({ code: 200, msg: '修改成功' });
+        });
     });
 });
 

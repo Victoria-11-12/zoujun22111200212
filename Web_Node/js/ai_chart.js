@@ -12,11 +12,82 @@
         // sessionId
         const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+        // ==================== AI图表使用次数限制配置 ====================
+        // 定义不同角色的AI图表使用次数上限，-1表示无限制
+        const CHART_LIMITS = {
+            'user': 10,      // 普通用户：10次
+            'analyst': 20,   // 分析师：20次
+            'admin': -1      // 管理员：无限制
+        };
+        // 24小时的时间戳（毫秒）
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+        /**
+         * 获取当前用户的AI图表使用数据（包含次数和最后重置时间）
+         * 如果超过24小时未重置，自动重置次数
+         * @returns {Object} 包含count和lastReset的对象
+         */
+        function getChartUsageData() {
+            const username = localStorage.getItem('username');
+            if (!username) return { count: 0, lastReset: Date.now() };
+            const key = 'ai_chart_usage_' + username;
+            const stored = localStorage.getItem(key);
+            if (!stored) {
+                return { count: 0, lastReset: Date.now() };
+            }
+            try {
+                const data = JSON.parse(stored);
+                const now = Date.now();
+                // 检查是否超过24小时，超过则重置
+                if (now - data.lastReset > ONE_DAY_MS) {
+                    const newData = { count: 0, lastReset: now };
+                    localStorage.setItem(key, JSON.stringify(newData));
+                    return newData;
+                }
+                return data;
+            } catch (e) {
+                // 解析失败时返回默认值
+                return { count: 0, lastReset: Date.now() };
+            }
+        }
+
+        /**
+         * 增加AI图表使用次数
+         * 每次生成图表成功后调用
+         */
+        function incrementChartUsage() {
+            const username = localStorage.getItem('username');
+            if (!username) return;
+            const key = 'ai_chart_usage_' + username;
+            const data = getChartUsageData();
+            data.count += 1;
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        /**
+         * 检查AI图表使用限制
+         * @returns {Object} 包含allowed(是否允许)、current(当前次数)、limit(上限)的对象
+         */
+        function checkChartLimit() {
+            const role = localStorage.getItem('role') || 'user';
+            const limit = CHART_LIMITS[role] || CHART_LIMITS['user'];
+            // -1表示无限制
+            if (limit === -1) return { allowed: true, current: 0, limit: -1 };
+            const data = getChartUsageData();
+            return { allowed: data.count < limit, current: data.count, limit: limit };
+        }
+
         if (chartBtn) {
             chartBtn.onclick = function() {
                 const username = localStorage.getItem('username');
                 if (!username) {
                     alert('请先登录后再使用在线绘图功能');
+                    return;
+                }
+                // 检查使用次数限制
+                const limitCheck = checkChartLimit();
+                if (!limitCheck.allowed) {
+                    alert('今日AI绘图次数已用完（上限' + limitCheck.limit + '次），请24小时后再试');
                     return;
                 }
                 chartModal.style.display = 'flex';
@@ -137,6 +208,8 @@
                                             // 收到图表 HTML → 用 iframe 渲染
                                             aiMsgDiv.textContent = '';
                                             addChartIframe(parsed.chart_html);
+                                            // 图表生成成功后增加使用次数
+                                            incrementChartUsage();
                                         } else if (parsed.content) {
                                             // 收到文字内容 → 更新气泡
                                             fullContent += parsed.content;
