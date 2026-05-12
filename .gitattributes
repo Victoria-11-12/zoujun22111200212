@@ -11,3 +11,6 @@ Web_Node/js/marked.min.js linguist-vendored=true
 # 机器学习模型文件（大文件，不计入语言统计）
 Flask/*.pkl linguist-vendored=true
 *.pkl filter=lfs diff=lfs merge=lfs -text
+
+# 测试报告 HTML 文件（提交到 GitHub 但不参与代码量统计）
+fastapi/测试文档/测试报告/*.html linguist-generated=true
