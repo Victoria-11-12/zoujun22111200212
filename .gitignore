@@ -148,6 +148,9 @@ vite.config.ts.timestamp-*
 
 Flask/111.py
 
+# 测试报告 HTML 文件（不参与代码量统计）
+fastapi/测试文档/测试报告/*.html
+
 Flask/test.ipynb
 
 # Office 临时文件
