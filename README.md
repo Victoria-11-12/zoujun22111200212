@@ -105,6 +105,7 @@ Docker 部署环境下未打包 Chrome 浏览器（内存占用过大），因�
 ![系统架构图](./assets/images/系统架构图.png)
 
 > 更多架构图见各服务文件夹内的 `相关流程图` 目录（Flask、Web\_Node、fastapi）。
+> Nginx为后续引入，项目流程流程图里暂无Nginx反向代理
 
 ## 技术路线
 
