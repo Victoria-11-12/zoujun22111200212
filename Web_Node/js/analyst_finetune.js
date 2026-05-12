@@ -45,7 +45,7 @@ async function previewData() {
         if (endDate) params.append('end_date', endDate);
         tables.forEach(t => params.append('tables', t));
         
-        const response = await fetch(`/api/analyst/preview?${params.toString()}`);
+        const response = await fetch(`/analyst/preview?${params.toString()}`);
         const data = await response.json();
         
         if (data.error) {
@@ -96,7 +96,7 @@ async function exportJsonl() {
         if (endDate) params.append('end_date', endDate);
         tables.forEach(t => params.append('tables', t));
         
-        const response = await fetch(`/api/analyst/export?${params.toString()}`);
+        const response = await fetch(`/analyst/export?${params.toString()}`);
         
         if (!response.ok) {
             throw new Error('导出失败');

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where nginx *)",
+      "Read(//c//**)",
+      "Read(//d//**)",
+      "Bash(tasklist)"
+    ]
+  }
+}

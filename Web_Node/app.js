@@ -46,7 +46,7 @@ const saveLog = (username, action, req) => {
 const SECRET_KEY = 'your_movie_data_secret_key_123';
 
 // ------------------- 注册 -------------------
-app.post('/api/register', (req, res) => {
+app.post('/register', (req, res) => {
     const { username, password } = req.body;
 
     // 1. 检查数据是否完整
@@ -76,7 +76,7 @@ app.post('/api/register', (req, res) => {
 
 
 // ------------------- 登录 -------------------
-app.post('/api/login', (req, res) => {
+app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     // 1. 基础检查
@@ -123,7 +123,7 @@ app.post('/api/login', (req, res) => {
 
 
 // 2. 获取电影数据的接口 (保留原有逻辑)
-app.get('/api/movies', (req, res) => {
+app.get('/movies', (req, res) => {
     const sql = "SELECT * FROM movies"; 
     db.query(sql, (err, results) => {
         if (err) return res.status(500).json({ error: '数据库查询出错' });
@@ -132,7 +132,7 @@ app.get('/api/movies', (req, res) => {
 });
 
 // ------------------- 管理员：获取所有用户列表 -------------------
-app.get('/api/admin/users', (req, res) => {
+app.get('/admin/users', (req, res) => {
     const sql = 'SELECT id, username, role, create_time FROM users';
     db.query(sql, (err, results) => {
         if (err) return res.send({ code: 500, msg: '获取用户列表失败' });
@@ -141,7 +141,7 @@ app.get('/api/admin/users', (req, res) => {
 });
 
 // ------------------- 管理员：删除用户 -------------------
-app.delete('/api/admin/users/:id', (req, res) => {
+app.delete('/admin/users/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM users WHERE id = ?';
     db.query(sql, [id], (err, results) => {
@@ -151,7 +151,7 @@ app.delete('/api/admin/users/:id', (req, res) => {
 });
 
 // ------------------- 管理员：新增用户 -------------------
-app.post('/api/admin/users', (req, res) => {
+app.post('/admin/users', (req, res) => {
     const { username, password, role } = req.body;
     // 先加密密码再存入
     const hashedPassword = bcrypt.hashSync(password, 10);
@@ -163,7 +163,7 @@ app.post('/api/admin/users', (req, res) => {
 });
 
 // ------------------- 管理员：修改用户权限/信息 -------------------
-app.put('/api/admin/users/:id', (req, res) => {
+app.put('/admin/users/:id', (req, res) => {
     const id = req.params.id;
     const { role } = req.body; // 这里以修改角色为例
     const sql = 'UPDATE users SET role = ? WHERE id = ?';
@@ -175,7 +175,7 @@ app.put('/api/admin/users/:id', (req, res) => {
 
 
 // --- [管理员：获取操作日志列表] ---
-app.get('/api/admin/logs', (req, res) => {
+app.get('/admin/logs', (req, res) => {
     const sql = 'SELECT * FROM logs ORDER BY create_time DESC LIMIT 100';
     db.query(sql, (err, results) => {
         if (err) return res.send({ code: 500, msg: '获取日志失败' });
@@ -184,7 +184,7 @@ app.get('/api/admin/logs', (req, res) => {
 });
 
 // --- [模块三：获取全图表配置 (供大屏使用)] ---
-app.get('/api/charts/config', (req, res) => {
+app.get('/charts/config', (req, res) => {
     // 查询数据库中 6 个工位的所有配置
     const sql = 'SELECT position_id, chart_type, chart_title FROM chart_configs';
     db.query(sql, (err, results) => {
@@ -208,7 +208,7 @@ app.get('/api/charts/config', (req, res) => {
 });
 
 // --- [模块三：修改图表配置 (供后台管理使用)] ---
-app.post('/api/charts/update', (req, res) => {
+app.post('/charts/update', (req, res) => {
     const { position_id, chart_type, chart_title } = req.body;
     
     // 更新数据库中对应位置的图表类型和标题
@@ -224,7 +224,7 @@ app.post('/api/charts/update', (req, res) => {
 // --- [模块五：获取用户留言] ---
 // -
 // ------------------- 用户提交留言接口 -------------------
-app.post('/api/messages', (req, res) => {
+app.post('/messages', (req, res) => {
     const { username, message } = req.body;
     if (!username || !message) {
         return res.send({ code: 400, msg: '用户名和留言内容不能为空' });
@@ -240,7 +240,7 @@ app.post('/api/messages', (req, res) => {
 });
 // --- [管理员：获取留言列表] ---
 
-app.get('/api/admin/messages', (req, res) => {
+app.get('/admin/messages', (req, res) => {
     const sql = 'SELECT id, username, message, mes_time FROM user_messages ORDER BY mes_time DESC';
     db.query(sql, (err, results) => {
         if (err) {
@@ -252,7 +252,7 @@ app.get('/api/admin/messages', (req, res) => {
 });
 
 // --- [管理员：删除留言] ---
-app.delete('/api/admin/messages/:id', (req, res) => {
+app.delete('/admin/messages/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM user_messages WHERE id = ?';
     db.query(sql, [id], (err, results) => {
@@ -265,7 +265,7 @@ app.delete('/api/admin/messages/:id', (req, res) => {
 });
 
 // ------------------- 分析师：数据概览 -------------------
-app.get('/api/analyst/overview', (req, res) => {
+app.get('/analyst/overview', (req, res) => {
     const result = {
         chat_trend: [],
         intent_distribution: [],
@@ -350,7 +350,7 @@ app.get('/api/analyst/overview', (req, res) => {
 });
 
 // ------------------- 分析师：预览微调数据 -------------------
-app.get('/api/analyst/preview', (req, res) => {
+app.get('/analyst/preview', (req, res) => {
     const { min_score = 4, tables, start_date, end_date, limit = 10 } = req.query;
     
     // 构建查询条件
@@ -422,7 +422,7 @@ app.get('/api/analyst/preview', (req, res) => {
 });
 
 // ------------------- 分析师：导出 JSONL -------------------
-app.get('/api/analyst/export', (req, res) => {
+app.get('/analyst/export', (req, res) => {
     const { min_score = 4, tables, start_date, end_date } = req.query;
     
     // 构建查询条件

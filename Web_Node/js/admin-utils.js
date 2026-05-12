@@ -6,7 +6,7 @@ function ensureMovieData(callback) {
         return;
     }
 
-    fetch('/api/movies')
+    fetch('/movies')
         .then(res => {
             if (!res.ok) throw new Error('网络响应错误');
             return res.json();

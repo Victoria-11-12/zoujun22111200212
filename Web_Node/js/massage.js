@@ -35,7 +35,7 @@
                     if (!message) { alert('留言内容不能为空'); return; }
                     const username = localStorage.getItem('username');
                     if (!username) { alert('登录信息已失效，请重新登录'); return; }
-                    fetch('/api/messages', {
+                    fetch('/messages', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, message })

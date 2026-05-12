@@ -1,7 +1,7 @@
 // 操作日志模块
 
 window.loadLogList = function() {
-    fetch('/api/admin/logs')
+    fetch('/admin/logs')
         .then(res => res.json())
         .then(res => {
             if (res.code === 200) {
