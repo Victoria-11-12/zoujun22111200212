@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const compression = require('compression');
 const mysql = require('mysql2');
 const cors = require('cors');
 const bcrypt = require('bcryptjs'); 
@@ -8,7 +9,8 @@ const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
 
 const app = express();
-app.use(cors()); 
+app.use(cors());
+app.use(compression()); 
 
 //解析 JSON 格式的请求体，否则无法获取前端传来的用户名和密码
 app.use(express.json());
@@ -30,7 +32,8 @@ const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    connectionLimit: 50
 });
 
 // --- [日志工具函数] ---
