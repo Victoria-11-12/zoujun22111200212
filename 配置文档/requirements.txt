@@ -1,8 +1,8 @@
 # FastAPI 服务依赖
-fastapi==0.104.1
-uvicorn==0.24.0
+fastapi==0.136.1
+uvicorn==0.46.0
 python-multipart==0.0.24
-pydantic==2.13.4
+pydantic==2.12.5
 
 # LangChain 相关库
 langchain==1.2.17
@@ -21,7 +21,7 @@ sqlalchemy==2.0.23
 bcrypt==5.0.0
 
 # 环境变量
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Docker SDK
 docker>=7.0.0
