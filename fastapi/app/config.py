@@ -1,18 +1,18 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Windows Docker 连接配置，必须在 import os
 if sys.platform == 'win32':
     os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
 
-from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from sqlalchemy import create_engine
 import pymysql
 import httpx
-
-load_dotenv()
 
 # 自定义 httpx 客户端，调大连接池避免密集调用时连接复用失败
 # 同步客户端用于同步调用
