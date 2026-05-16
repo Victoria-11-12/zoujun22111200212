@@ -31,6 +31,15 @@
             <input type="password" id="confirmPassword" placeholder="请再次输入密码">
         </div>
 
+        <div class="input-group captcha-group">
+            <label>验证码</label>
+            <div class="captcha-wrapper">
+                <input type="text" id="captcha" placeholder="请输入验证码" maxlength="4">
+                <div class="captcha-image" id="captchaImage" title="点击刷新验证码"></div>
+            </div>
+        </div>
+        <input type="hidden" id="captchaToken">
+
         <div class="btn-group">
             <button id="regBtn" style="background: #19ba8b;">提交注册</button>
             <a href="login.html" class="reg-link">已有账号？返回登录</a>
@@ -38,11 +47,34 @@
     </div>
 
 <script>
+    // 加载验证码
+    function loadCaptcha() {
+        fetch('/captcha')
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 200) {
+                    document.getElementById('captchaImage').innerHTML = data.data.svg;
+                    document.getElementById('captchaToken').value = data.data.token;
+                }
+            })
+            .catch(err => {
+                console.error('加载验证码失败:', err);
+            });
+    }
+
+    // 点击验证码图片刷新
+    document.getElementById('captchaImage').onclick = loadCaptcha;
+
+    // 页面加载时获取验证码
+    loadCaptcha();
+
     document.getElementById('regBtn').onclick = function() {
         const btn = this; // 获取按钮引用
         const user = document.getElementById('regUsername').value.trim(); // 去除空格
         const pass = document.getElementById('regPassword').value;
         const confirmPass = document.getElementById('confirmPassword').value;
+        const captcha = document.getElementById('captcha').value.trim();
+        const captchaToken = document.getElementById('captchaToken').value;
 
         // 1. 严谨校验
         if (!user || !pass) {
@@ -57,6 +89,10 @@
             alert("两次输入的密码不一致");
             return;
         }
+        if (!captcha) {
+            alert("请输入验证码");
+            return;
+        }
 
         // 2. 禁用按钮，防止重复提交
         btn.disabled = true;
@@ -68,7 +104,12 @@
         fetch('/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass })
+            body: JSON.stringify({ 
+                username: user, 
+                password: pass,
+                captcha: captcha,
+                captchaToken: captchaToken
+            })
         })
         .then(res => res.json())
         .then(data => {
@@ -80,6 +121,8 @@
                 // 失败了恢复按钮
                 btn.disabled = false;
                 btn.innerText = "提交注册";
+                // 刷新验证码
+                loadCaptcha();
             }
         })
         .catch(err => {

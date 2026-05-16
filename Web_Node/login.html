@@ -33,6 +33,15 @@
             <input type="password" id="password" placeholder="请输入密码">
         </div>
 
+        <div class="input-group captcha-group">
+            <label>验证码</label>
+            <div class="captcha-wrapper">
+                <input type="text" id="captcha" placeholder="请输入验证码" maxlength="4">
+                <div class="captcha-image" id="captchaImage" title="点击刷新验证码"></div>
+            </div>
+        </div>
+        <input type="hidden" id="captchaToken">
+
         <div class="login-options">
             <label class="login-option">
                 <input type="radio" name="loginType" value="user" checked> 普通用户登录
@@ -52,15 +61,42 @@
     </div>
 
  <script>
+    // 加载验证码
+    function loadCaptcha() {
+        fetch('/captcha')
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 200) {
+                    document.getElementById('captchaImage').innerHTML = data.data.svg;
+                    document.getElementById('captchaToken').value = data.data.token;
+                }
+            })
+            .catch(err => {
+                console.error('加载验证码失败:', err);
+            });
+    }
+
+    // 点击验证码图片刷新
+    document.getElementById('captchaImage').onclick = loadCaptcha;
+
+    // 页面加载时获取验证码
+    loadCaptcha();
+
     document.getElementById('loginBtn').onclick = function() {
         // 1. 获取输入值
         const user = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         const loginType = document.querySelector('input[name="loginType"]:checked').value;
+        const captcha = document.getElementById('captcha').value.trim();
+        const captchaToken = document.getElementById('captchaToken').value;
 
         // 2. 基础校验
         if (!user || !pass) {
             alert("请输入账号密码");
+            return;
+        }
+        if (!captcha) {
+            alert("请输入验证码");
             return;
         }
 
@@ -68,7 +104,12 @@
         fetch('/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass })
+            body: JSON.stringify({ 
+                username: user, 
+                password: pass,
+                captcha: captcha,
+                captchaToken: captchaToken
+            })
         })
         .then(res => res.json())
         .then(data => {
@@ -111,8 +152,10 @@
                     window.location.href = 'demo.html';
                 }
             } else {
-                // 登录失败（如密码错误、用户不存在）
+                // 登录失败（如密码错误、用户不存在、验证码错误）
                 alert('登录失败：' + data.msg);
+                // 刷新验证码
+                loadCaptcha();
             }
         })
         .catch(err => {

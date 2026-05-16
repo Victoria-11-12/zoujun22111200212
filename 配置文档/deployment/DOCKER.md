@@ -14,6 +14,7 @@
 - [安装 Docker](#安装-docker)
 - [部署步骤](#部署步骤)
 - [验证部署](#验证部署)
+- [宿主机 Nginx 配置](#宿主机-nginx-配置)
 - [常用命令](#常用命令)
 - [故障排查](#故障排查)
 
@@ -125,7 +126,7 @@ DB_PASS=your_mysql_password
 docker build -t pyecharts-sandbox ../../fastapi
 ```
 
-### 第5步：启动服务
+### 第5步：启动服务 
 
 ```bash
 # 在 deployment 目录下执行

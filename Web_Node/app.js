@@ -7,6 +7,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
 const OpenAI = require('openai');
+const svgCaptcha = require('svg-captcha');
 
 const app = express();
 app.use(cors());
@@ -46,18 +47,64 @@ const saveLog = (username, action, req) => {
 };
 
 // 定义 JWT 密钥
-const SECRET_KEY = 'your_movie_data_secret_key_123';
+const SECRET_KEY = process.env.JWT_SECRET || 'your_movie_data_secret_key_123';
+
+// ------------------- 验证码生成 -------------------
+app.get('/captcha', (req, res) => {
+    // 生成 4 位数字验证码
+    const captcha = svgCaptcha.create({
+        size: 4,
+        noise: 2,
+        color: true,
+        background: '#cc9966'
+    });
+    
+    // 生成临时 JWT，包含验证码文本，有效期 5 分钟
+    const captchaToken = jwt.sign(
+        { captcha: captcha.text.toLowerCase() },
+        SECRET_KEY,
+        { expiresIn: '5m' }
+    );
+    
+    // 返回 SVG 图片和 token
+    res.type('svg');
+    res.status(200).json({
+        code: 200,
+        data: {
+            svg: captcha.data,
+            token: captchaToken
+        }
+    });
+});
 
 // ------------------- 注册 -------------------
 app.post('/register', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, captcha, captchaToken } = req.body;
 
-    // 1. 检查数据是否完整
+    // 1. 验证码校验
+    if (!captcha || !captchaToken) {
+        return res.send({ code: 400, msg: '验证码不能为空' });
+    }
+
+    try {
+        // 验证 JWT 并提取验证码
+        const decoded = jwt.verify(captchaToken, SECRET_KEY);
+        const correctCaptcha = decoded.captcha;
+        
+        // 比对验证码（不区分大小写）
+        if (captcha.toLowerCase() !== correctCaptcha) {
+            return res.send({ code: 400, msg: '验证码错误' });
+        }
+    } catch (error) {
+        return res.send({ code: 400, msg: '验证码已过期或无效' });
+    }
+
+    // 2. 检查数据是否完整
     if (!username || !password) {
         return res.send({ code: 400, msg: '用户名或密码不能为空' });
     }
 
-    // 2. 检查用户名是否已存在
+    // 3. 检查用户名是否已存在
     const checkSql = 'SELECT * FROM users WHERE username = ?';
     db.query(checkSql, [username], (err, results) => {
         if (err) return res.send({ code: 500, msg: '数据库查询错误' });
@@ -65,10 +112,10 @@ app.post('/register', (req, res) => {
             return res.send({ code: 400, msg: '用户名已被占用' });
         }
 
-        // 3. 对密码进行加密处理 (强度设置为 10)
+        // 4. 对密码进行加密处理 (强度设置为 10)
         const hashedPassword = bcrypt.hashSync(password, 10);
 
-        // 4. 将用户信息写入数据库
+        // 5. 将用户信息写入数据库
         const insertSql = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
         db.query(insertSql, [username, hashedPassword, 'user'], (err, results) => {
             if (err) return res.send({ code: 500, msg: '注册失败' });
@@ -80,32 +127,50 @@ app.post('/register', (req, res) => {
 
 // ------------------- 登录 -------------------
 app.post('/login', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, captcha, captchaToken } = req.body;
 
-    // 1. 基础检查
+    // 1. 验证码校验
+    if (!captcha || !captchaToken) {
+        return res.send({ code: 400, msg: '验证码不能为空' });
+    }
+
+    try {
+        // 验证 JWT 并提取验证码
+        const decoded = jwt.verify(captchaToken, SECRET_KEY);
+        const correctCaptcha = decoded.captcha;
+        
+        // 比对验证码（不区分大小写）
+        if (captcha.toLowerCase() !== correctCaptcha) {
+            return res.send({ code: 400, msg: '验证码错误' });
+        }
+    } catch (error) {
+        return res.send({ code: 400, msg: '验证码已过期或无效' });
+    }
+
+    // 2. 基础检查
     if (!username || !password) {
         return res.send({ code: 400, msg: '用户名或密码不能为空' });
     }
 
-    // 2. 根据用户名查询用户信息
+    // 3. 根据用户名查询用户信息
     const sql = 'SELECT * FROM users WHERE username = ?';
     db.query(sql, [username], (err, results) => {
         if (err) return res.send({ code: 500, msg: '服务器数据库错误' });
         
-        // 3. 检查用户是否存在
+        // 4. 检查用户是否存在
         if (results.length === 0) {
             return res.send({ code: 400, msg: '该用户不存在' });
         }
 
         const user = results[0];
 
-        // 4. 使用 bcrypt 比对前端传来的明文密码和数据库里的密文
+        // 5. 使用 bcrypt 比对前端传来的明文密码和数据库里的密文
         const isMatch = bcrypt.compareSync(password, user.password);
         if (!isMatch) {
             return res.send({ code: 400, msg: '密码错误' });
         }
 
-        // 5. 密码正确，签发 Token (有效期设置为 24小时)
+        // 6. 密码正确，签发 Token (有效期设置为 24小时)
         // 载荷中存入用户 id, username 和 role，方便后续权限判定
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
@@ -113,7 +178,7 @@ app.post('/login', (req, res) => {
             { expiresIn: '24h' }
         );
 
-        // 6. 返回成功信息、Token 和 角色
+        // 7. 返回成功信息、Token 和 角色
         saveLog(user.username, '执行了登录操作', req);
         res.send({
             code: 200,
