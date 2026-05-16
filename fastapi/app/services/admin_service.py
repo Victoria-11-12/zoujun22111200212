@@ -46,7 +46,7 @@ async def admin_ai_stream(request: AdminChatRequest, req: Request):
                 return
 
             log_admin_chat(session_id, "user", message, user_name=request.username)
-            result = await admin_executor.ainvoke({"input": message, "history": history})
+            result = await admin_executor.ainvoke({"input": message})
             agent_reply = result.get('output', '')
 
             for i in range(0, len(agent_reply), 10):
