@@ -47,7 +47,7 @@ const saveLog = (username, action, req) => {
 };
 
 // 定义 JWT 密钥
-const SECRET_KEY = process.env.JWT_SECRET || 'your_movie_data_secret_key_123';
+const SECRET_KEY = process.env.JWT_SECRET;
 
 // ------------------- 验证码生成 -------------------
 app.get('/captcha', (req, res) => {

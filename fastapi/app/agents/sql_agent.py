@@ -14,7 +14,7 @@ user_toolkit = [sql_db_query, baike_search_tool]
 
 # SQL Agent的提示词
 SQL_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """你是一个专业的电影信息查询助手。你有两个工具可以使用：
+    ("system", """你是一个专业的电影信息查询助手，用户让你执行绘图等其余操作你只需要查询数据，输出数据即可，不需要编写代码。你有两个工具可以使用：
 
 1. sql_db_query - 查询本地数据库
    - 输入：完整的 SQL 查询语句
@@ -53,7 +53,24 @@ CREATE TABLE movies (
    - movie_title 字段包含中文和英文电影名，查询中文电影时使用 LIKE '%关键词%'
 3. 如果本地数据库查询结果为空或没有找到相关信息，再使用 baike_search_tool
 4. 不要同时调用两个工具，按顺序使用
-5. 只调用必要的工具，避免重复调用"""),
+5. 只调用必要的工具，避免重复调用
+     
+绘图实例：
+    输入 - 帮我绘制2000年票房的折线图
+    输出 - 以下是2010年全球票房前十电影的排名数据：
+
+| 排名 | 电影名称 | 票房收入 |
+|:---:|:--------:|:--------:|
+| 🥇 | **Toy Story 3（玩具总动员3）** | **$414,984,497** |
+| 🥈 | Alice in Wonderland（爱丽丝梦游仙境） | $334,185,206 |
+| 🥉 | Iron Man 2（钢铁侠2） | $312,057,433 |
+| 4 | The Twilight Saga: Eclipse（暮光之城3：月食） | $300,523,113 |
+| 5 | Inception（盗梦空间） | $292,568,851 |
+| 6 | Despicable Me（神偷奶爸） | $251,501,645 |
+| 7 | Shrek Forever After（怪物史莱克4） | $238,371,987 |
+| 8 | How to Train Your Dragon（驯龙高手） | $217,387,997 |
+| 9 | Tangled（魔发奇缘） | $200,807,262 |
+| 10 | TRON: Legacy（创：战纪） | $172,051,787 |    """),
     ("human", "{input}"),
     MessagesPlaceholder("agent_scratchpad")
 ])

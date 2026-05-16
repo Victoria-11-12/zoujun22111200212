@@ -265,6 +265,8 @@
             aiInput.value = '';
             // 禁用发送按钮
             sendAiMessage.disabled = true;
+            // 发起请求前立即计数，防止快速重复点击绕过限制
+            incrementChatUsage();
             // 异常处理
             try {
                 // 发起流式请求
@@ -313,8 +315,6 @@
                             if (data === '[DONE]') {
                                 // 结束消息渲染
                                 endAIMessage();
-                                // 消息成功接收后增加使用次数
-                                incrementChatUsage();
                             } else {
                                 // 尝试解析JSON
                                 try {

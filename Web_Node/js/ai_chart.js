@@ -166,6 +166,8 @@
                 addChartMessage(message, true);
                 chartInput.value = '';
                 generateChartBtn.disabled = true;
+                // 发起请求前立即计数，防止快速重复点击绕过限制
+                incrementChartUsage();
 
                 // 创建 AI 回复气泡
                 const aiMsgDiv = addChartMessage('🤔 思考中...', false);
@@ -208,8 +210,6 @@
                                             // 收到图表 HTML → 用 iframe 渲染
                                             aiMsgDiv.textContent = '';
                                             addChartIframe(parsed.chart_html);
-                                            // 图表生成成功后增加使用次数
-                                            incrementChartUsage();
                                         } else if (parsed.content) {
                                             // 收到文字内容 → 更新气泡
                                             fullContent += parsed.content;
