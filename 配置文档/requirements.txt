@@ -15,7 +15,7 @@ langchain-classic==1.0.5
 
 # 数据库
 pymysql==1.1.0
-sqlalchemy==2.0.23
+sqlalchemy>=2.0.36
 
 # 安全与加密
 bcrypt==5.0.0

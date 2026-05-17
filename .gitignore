@@ -186,3 +186,5 @@ venv.bak/
 *.~vsd
 *.~vsdx
 .claude
+
+.langgraph_api/
