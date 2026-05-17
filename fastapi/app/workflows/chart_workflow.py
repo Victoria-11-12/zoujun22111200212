@@ -3,12 +3,16 @@
 
 import re
 import os
+import asyncio
 import docker
 from typing import List, TypedDict
 from langgraph.graph import StateGraph, END
 from app.agents.sql_agent import sql_executor
 from app.chains.chart_chains import python_chart_chain
 from app.logs import log_chart_generation
+
+# Docker容器并发控制信号量，限制同时运行的容器数量，防止资源耗尽
+DOCKER_SEMAPHORE = asyncio.Semaphore(5)
 
 
 # 状态机，共享白板，所有节点共享数据，每个节点都可以读写
@@ -136,48 +140,50 @@ async def _node_pyecharts_sandbox(state: ChartGraphState) -> ChartGraphState:
 
     print(f"[ChartGraph] pyecharts_sandbox: 开始执行 Docker 沙箱, 代码长度: {len(code)}")
 
-    try:
-        # 创建Docker客户端，从环境变量读取配置
-        client = docker.from_env()
-        
-        # 在Docker沙箱容器中执行Python代码，配置严格的安全限制
-        container = client.containers.run(
-            "pyecharts-sandbox",  # 使用预构建的pyecharts沙箱镜像
-            command=["python", "-c", code],  # 执行传入的Python代码
-            mem_limit="256m",  # 内存限制256MB，防止内存耗尽攻击
-            nano_cpus=500000000,  # CPU限制0.5核，防止CPU滥用
-            pids_limit=1,  # 进程数限制为1，防止fork炸弹
-            network_disabled=True,  # 禁用网络，防止数据泄露和外部通信
-            read_only=True,  # 只读文件系统，防止恶意写入
-            detach=True,  # 后台运行模式
-            stdout=True,  # 捕获标准输出
-            stderr=True,  # 捕获标准错误
-        )
+    # 使用信号量控制并发，最多5个容器同时运行，超出自动排队等待
+    async with DOCKER_SEMAPHORE:
+        try:
+            # 创建Docker客户端，从环境变量读取配置
+            client = docker.from_env()
+            
+            # 在Docker沙箱容器中执行Python代码，配置严格的安全限制
+            container = client.containers.run(
+                "pyecharts-sandbox",  # 使用预构建的pyecharts沙箱镜像
+                command=["python", "-c", code],  # 执行传入的Python代码
+                mem_limit="256m",  # 内存限制256MB，防止内存耗尽攻击
+                nano_cpus=500000000,  # CPU限制0.5核，防止CPU滥用
+                pids_limit=1,  # 进程数限制为1，防止fork炸弹
+                network_disabled=True,  # 禁用网络，防止数据泄露和外部通信
+                read_only=True,  # 只读文件系统，防止恶意写入
+                detach=True,  # 后台运行模式
+                stdout=True,  # 捕获标准输出
+                stderr=True,  # 捕获标准错误
+            )
 
-        # 等待容器执行完成，最长等待90秒
-        result = container.wait(timeout=90)
-        
-        # 获取容器标准输出并解码为字符串
-        stdout = container.logs(stdout=True).decode()
-        
-        # 获取容器标准错误并解码为字符串
-        stderr = container.logs(stderr=True).decode()
-        
-        # 清理容器资源，释放系统资源
-        container.remove()
+            # 等待容器执行完成，最长等待90秒
+            result = container.wait(timeout=90)
+            
+            # 获取容器标准输出并解码为字符串
+            stdout = container.logs(stdout=True).decode()
+            
+            # 获取容器标准错误并解码为字符串
+            stderr = container.logs(stderr=True).decode()
+            
+            # 清理容器资源，释放系统资源
+            container.remove()
 
-        if result.get("StatusCode", 1) != 0:
-            raise RuntimeError(f"Docker execution failed: {stderr}")
+            if result.get("StatusCode", 1) != 0:
+                raise RuntimeError(f"Docker execution failed: {stderr}")
 
-        match = re.search(r"CHART_HTML_START(.*?)CHART_HTML_END", stdout, re.DOTALL)
-        if not match:
-            raise ValueError("沙箱执行成功但未找到 CHART_HTML 标记")
+            match = re.search(r"CHART_HTML_START(.*?)CHART_HTML_END", stdout, re.DOTALL)
+            if not match:
+                raise ValueError("沙箱执行成功但未找到 CHART_HTML 标记")
 
-        chart_html = match.group(1)
+            chart_html = match.group(1)
 
-        # 从环境变量读取 ECharts 脚本地址
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-        chart_html = f"""<!DOCTYPE html>
+            # 从环境变量读取 ECharts 脚本地址
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset=\"utf-8\">
 <script src=\"{frontend_url}/js/echarts.js\"><\/script>
 <style>
@@ -190,17 +196,17 @@ charts.forEach(function(c){{echarts.init(c).resize();}});
 window.onresize=function(){{charts.forEach(function(c){{echarts.getInstanceByDom(c).resize();}});}};
 <\/script></body></html>"""
 
-        state["chart_html"] = chart_html
-        log_chart_generation(session_id, user_name, question, sql_result, code, True)
+            state["chart_html"] = chart_html
+            log_chart_generation(session_id, user_name, question, sql_result, code, True)
 
-    except Exception as e:
-        state["error"] = str(e)
-        state["feedback"] = (
-            "沙箱执行失败，请修改代码并重新输出完整代码。\n"
-            f"错误: {e}\n\n"
-            "提醒: 只能使用允许的库，并打印 CHART_HTML_START...CHART_HTML_END 标记。"
-        )
-        log_chart_generation(session_id, user_name, question, sql_result, code, False, str(e))
+        except Exception as e:
+            state["error"] = str(e)
+            state["feedback"] = (
+                "沙箱执行失败，请修改代码并重新输出完整代码。\n"
+                f"错误: {e}\n\n"
+                "提醒: 只能使用允许的库，并打印 CHART_HTML_START...CHART_HTML_END 标记。"
+            )
+            log_chart_generation(session_id, user_name, question, sql_result, code, False, str(e))
 
     return state
 
