@@ -137,21 +137,33 @@ async def _node_pyecharts_sandbox(state: ChartGraphState) -> ChartGraphState:
     print(f"[ChartGraph] pyecharts_sandbox: 开始执行 Docker 沙箱, 代码长度: {len(code)}")
 
     try:
+        # 创建Docker客户端，从环境变量读取配置
         client = docker.from_env()
+        
+        # 在Docker沙箱容器中执行Python代码，配置严格的安全限制
         container = client.containers.run(
-            "pyecharts-sandbox",
-            command=["python", "-c", code],
-            mem_limit="256m",
-            network_disabled=True,
-            read_only=True,
-            detach=True,
-            stdout=True,
-            stderr=True,
+            "pyecharts-sandbox",  # 使用预构建的pyecharts沙箱镜像
+            command=["python", "-c", code],  # 执行传入的Python代码
+            mem_limit="256m",  # 内存限制256MB，防止内存耗尽攻击
+            nano_cpus=500000000,  # CPU限制0.5核，防止CPU滥用
+            pids_limit=1,  # 进程数限制为1，防止fork炸弹
+            network_disabled=True,  # 禁用网络，防止数据泄露和外部通信
+            read_only=True,  # 只读文件系统，防止恶意写入
+            detach=True,  # 后台运行模式
+            stdout=True,  # 捕获标准输出
+            stderr=True,  # 捕获标准错误
         )
 
-        result = container.wait()
+        # 等待容器执行完成，最长等待90秒
+        result = container.wait(timeout=90)
+        
+        # 获取容器标准输出并解码为字符串
         stdout = container.logs(stdout=True).decode()
+        
+        # 获取容器标准错误并解码为字符串
         stderr = container.logs(stderr=True).decode()
+        
+        # 清理容器资源，释放系统资源
         container.remove()
 
         if result.get("StatusCode", 1) != 0:
@@ -163,7 +175,7 @@ async def _node_pyecharts_sandbox(state: ChartGraphState) -> ChartGraphState:
 
         chart_html = match.group(1)
 
-        # 从环境变量读取 ECharts 脚本地址，支持开源项目安全配置
+        # 从环境变量读取 ECharts 脚本地址
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         chart_html = f"""<!DOCTYPE html>
 <html><head><meta charset=\"utf-8\">
