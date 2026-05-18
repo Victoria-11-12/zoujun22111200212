@@ -19,6 +19,15 @@ timeout /t 3 >nul
 
 echo [4/4] qidong Nginx fanxiang daili (duankou 80)...
 start "Nginx Proxy" cmd /k "D:\app\nginx\nginx-1.30.0\nginx.exe -p D:\app\nginx\nginx-1.30.0"
+timeout /t 3 >nul
+
+echo [5/6] qidong nginx-exporter (duankou 9113)...
+start "Nginx Exporter" cmd /k "D:\app\nginx-exporter\nginx-prometheus-exporter.exe -nginx.scrape-uri http://localhost:80/nginx_status"
+timeout /t 3 >nul
+
+echo [6/6] qidong Prometheus (duankou 9090)...
+start "Prometheus" cmd /k "cd /d D:\app\permetheus\prometheus-3.4.0.windows-amd64 && prometheus.exe --config.file=prometheus.yml"
+timeout /t 3 >nul
 
 @REM .\start_all.bat
 echo.
