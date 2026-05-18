@@ -26,6 +26,10 @@ sleep 3
 
 echo "[5/5] qidong Prometheus (duankou 9090)..."
 osascript -e "tell application \"Terminal\" to do script \"cd 'D:/app/permetheus/prometheus-3.4.0.windows-amd64' && ./prometheus.exe --config.file=prometheus.yml\""
+sleep 3
+
+echo "[6/6] qidong Grafana (duankou 3001)..."
+osascript -e "tell application \"Terminal\" to do script \"D:/app/grafana/grafana-13.0.1+security-01/bin/grafana.exe server -config D:/app/grafana/grafana-13.0.1+security-01/conf/defaults.ini\""
 
 echo ""
 echo "========================================"
