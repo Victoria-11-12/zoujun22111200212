@@ -35,6 +35,14 @@ const httpRequestDuration = new client.Histogram({
     registers: [register]
 });
 
+// 登录注册计数器
+const authCounter = new client.Counter({
+    name: 'auth_requests_total',
+    help: '登录注册请求总数',
+    labelNames: ['type', 'status'],
+    registers: [register]
+});
+
 // 请求统计中间件
 app.use((req, res, next) => {
     const start = Date.now();
@@ -166,7 +174,11 @@ app.post('/register', (req, res) => {
         // 5. 将用户信息写入数据库
         const insertSql = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
         db.query(insertSql, [username, hashedPassword, 'user'], (err, results) => {
-            if (err) return res.send({ code: 500, msg: '注册失败' });
+            if (err) {
+                authCounter.inc({ type: 'register', status: 'fail' });
+                return res.send({ code: 500, msg: '注册失败' });
+            }
+            authCounter.inc({ type: 'register', status: 'success' });
             res.send({ code: 200, msg: '注册成功！' });
         });
     });
@@ -203,10 +215,14 @@ app.post('/login', (req, res) => {
     // 3. 根据用户名查询用户信息
     const sql = 'SELECT * FROM users WHERE username = ?';
     db.query(sql, [username], (err, results) => {
-        if (err) return res.send({ code: 500, msg: '服务器数据库错误' });
+        if (err) {
+            authCounter.inc({ type: 'login', status: 'fail' });
+            return res.send({ code: 500, msg: '服务器数据库错误' });
+        }
         
         // 4. 检查用户是否存在
         if (results.length === 0) {
+            authCounter.inc({ type: 'login', status: 'fail' });
             return res.send({ code: 400, msg: '该用户不存在' });
         }
 
@@ -215,6 +231,7 @@ app.post('/login', (req, res) => {
         // 5. 使用 bcrypt 比对前端传来的明文密码和数据库里的密文
         const isMatch = bcrypt.compareSync(password, user.password);
         if (!isMatch) {
+            authCounter.inc({ type: 'login', status: 'fail' });
             return res.send({ code: 400, msg: '密码错误' });
         }
 
@@ -228,6 +245,7 @@ app.post('/login', (req, res) => {
 
         // 7. 返回成功信息、Token 和 角色
         saveLog(user.username, '执行了登录操作', req);
+        authCounter.inc({ type: 'login', status: 'success' });
         res.send({
             code: 200,
             msg: '登录成功',
