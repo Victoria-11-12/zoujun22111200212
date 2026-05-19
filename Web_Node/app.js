@@ -8,10 +8,58 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken'); 
 const OpenAI = require('openai');
 const svgCaptcha = require('svg-captcha');
+const client = require('prom-client');
 
 const app = express();
 app.use(cors());
-app.use(compression()); 
+app.use(compression());
+
+// Prometheus 指标注册
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+// HTTP 请求计数器
+const httpRequestsTotal = new client.Counter({
+    name: 'http_requests_total',
+    help: 'Total HTTP requests',
+    labelNames: ['service', 'method', 'endpoint', 'status'],
+    registers: [register]
+});
+
+// HTTP 请求延迟直方图
+const httpRequestDuration = new client.Histogram({
+    name: 'http_request_duration_seconds',
+    help: 'HTTP request duration in seconds',
+    labelNames: ['service', 'endpoint'],
+    buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    registers: [register]
+});
+
+// 请求统计中间件
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = (Date.now() - start) / 1000;
+        const endpoint = req.route ? req.route.path : req.path;
+        httpRequestsTotal.inc({
+            service: 'nodejs',
+            method: req.method,
+            endpoint: endpoint,
+            status: res.statusCode
+        });
+        httpRequestDuration.observe({
+            service: 'nodejs',
+            endpoint: endpoint
+        }, duration);
+    });
+    next();
+});
+
+// Prometheus 指标端点
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+}); 
 
 //解析 JSON 格式的请求体，否则无法获取前端传来的用户名和密码
 app.use(express.json());

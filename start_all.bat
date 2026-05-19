@@ -30,7 +30,7 @@ start "Prometheus" cmd /k "cd /d D:\app\permetheus\prometheus-3.4.0.windows-amd6
 timeout /t 3 >nul
 
 echo [7/7] qidong Grafana (duankou 3001)...
-start "Grafana" cmd /k "D:\app\grafana\grafana-13.0.1+security-01\bin\grafana.exe server -config D:\app\grafana\grafana-13.0.1+security-01\conf\defaults.ini"
+start "Grafana" cmd /k "cd /d D:\app\grafana\grafana-13.0.1+security-01 && .\bin\grafana.exe server -config .\conf\defaults.ini -homepath ."
 timeout /t 3 >nul
 
 @REM .\start_all.bat
