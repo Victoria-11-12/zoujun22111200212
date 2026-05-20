@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 if sys.platform == 'win32':
     os.environ['DOCKER_HOST'] = 'npipe:////./pipe/docker_engine'
@@ -8,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from dotenv import load_dotenv
+from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
 
 from app.routers import user, admin, chart, analyst
 
@@ -18,6 +20,50 @@ app = FastAPI(
     description="基于 LangChain 和 LangGraph 的智能电影数据查询与可视化系统",
     version="1.0.0"
 )
+
+# Prometheus 指标注册
+registry = CollectorRegistry()
+
+# HTTP 请求计数器
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['service', 'method', 'endpoint', 'status'],
+    registry=registry
+)
+
+# HTTP 请求延迟直方图
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['service', 'endpoint'],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    registry=registry
+)
+
+# 请求统计中间件
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    endpoint = request.url.path
+    http_requests_total.labels(
+        service='fastapi',
+        method=request.method,
+        endpoint=endpoint,
+        status=response.status_code
+    ).inc()
+    http_request_duration_seconds.labels(
+        service='fastapi',
+        endpoint=endpoint
+    ).observe(duration)
+    return response
+
+# Prometheus 指标端点
+@app.get("/metrics")
+def metrics():
+    return Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
 
 # 从环境变量读取
 # Nginx 代理模式，前端通过 http://localhost 访问
