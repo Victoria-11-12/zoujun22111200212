@@ -13,4 +13,4 @@ Flask/*.pkl linguist-vendored=true
 *.pkl filter=lfs diff=lfs merge=lfs -text
 
 # 测试报告 HTML 文件（提交到 GitHub 但不参与代码量统计）
-fastapi/测试文档/测试报告/*.html linguist-generated=true
+assets/文档/测试文档/测试报告/*.html linguist-generated=true
