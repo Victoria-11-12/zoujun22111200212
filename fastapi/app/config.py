@@ -35,6 +35,7 @@ llm = ChatOpenAI(
     openai_api_base=os.getenv('API_BASE'),
     temperature=0.1,  #模型温度，0-1之间，越大越随机，越小越确定
     streaming=True,
+    stream_usage=True,  # 流式调用时返回 token 用量
     extra_body={"thinking": {"type": "disabled"}},  # 禁用思考模式
     http_client=_http_client,
     http_async_client=_http_async_client

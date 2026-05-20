@@ -30,6 +30,7 @@ class ChartGraphState(TypedDict, total=False):
     attempts: int  # 尝试计数器防止无限循环
     chart_html: str  # 最终 HTML (仅在沙箱执行成功时设置)
     error: str  # 最终错误消息 (达到最大重试次数或致命错误时设置)
+    token_cb: object  # TokenTrackerCallback 实例，用于 token 埋点
 
 # 正则从 markdown 输出中提取 Python 代码块
 def _extract_python_code_block(text: str) -> str:
@@ -87,8 +88,9 @@ def _static_eval(code: str) -> tuple[bool, List[str], str]:
 # 节点1: sqlagent
 async def _node_sqlagent(state: ChartGraphState) -> ChartGraphState:
     question = state.get("question", "")
+    cb = state.get("token_cb")
     print(f"[ChartGraph] sqlagent: 开始查询数据库, 问题: {question}")
-    result = await sql_executor.ainvoke({"input": question})
+    result = await sql_executor.ainvoke({"input": question}, config={"callbacks": [cb]} if cb else {})
     state["sql_result"] = result.get("output", "")
     print(f"[ChartGraph] sqlagent: 查询完成, 结果长度: {len(state['sql_result'])}")
     return state
@@ -100,11 +102,13 @@ async def _node_pythonagent(state: ChartGraphState) -> ChartGraphState:
     question = state.get("question", "")
     sql_result = state.get("sql_result", "")
     feedback = state.get("feedback", "")
+    cb = state.get("token_cb")
 
     print(f"[ChartGraph] pythonagent: 开始生成代码, 尝试次数: {state['attempts']}")
 
     state["code_raw"] = await python_chart_chain.ainvoke(
-        {"question": question, "data": sql_result, "feedback": feedback}
+        {"question": question, "data": sql_result, "feedback": feedback},
+        config={"callbacks": [cb]} if cb else {}
     )
     print(f"[ChartGraph] pythonagent: 代码生成完成, 代码长度: {len(state['code_raw'])}")
     return state

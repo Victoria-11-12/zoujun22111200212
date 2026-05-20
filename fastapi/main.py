@@ -9,8 +9,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from dotenv import load_dotenv
-from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
+from app.metrics import registry, http_requests_total, http_request_duration_seconds
+import app.token_tracker  # noqa: F401 — 确保 token 指标注册到 registry
 from app.routers import user, admin, chart, analyst
 
 load_dotenv()
@@ -19,26 +21,6 @@ app = FastAPI(
     title="电影数据分析系统",
     description="基于 LangChain 和 LangGraph 的智能电影数据查询与可视化系统",
     version="1.0.0"
-)
-
-# Prometheus 指标注册
-registry = CollectorRegistry()
-
-# HTTP 请求计数器
-http_requests_total = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['service', 'method', 'endpoint', 'status'],
-    registry=registry
-)
-
-# HTTP 请求延迟直方图
-http_request_duration_seconds = Histogram(
-    'http_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['service', 'endpoint'],
-    buckets=[0.01, 0.05, 0.1, 0.5, 1, 2, 5],
-    registry=registry
 )
 
 # 请求统计中间件

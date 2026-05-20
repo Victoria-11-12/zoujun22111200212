@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from app.models import ChartRequest
 from app.chains.chart_chains import chart_intent_chain, chart_not_chain
 from app.workflows.chart_workflow import chart_graph
+from app.token_tracker import TokenTrackerCallback
 
 
 # 图表生成接口
@@ -16,14 +17,15 @@ async def chart_generate(request: ChartRequest):
     session_id = request.sessionId
     user_name = request.username
 
-    intent = await chart_intent_chain.ainvoke({"question": chart_message})
+    cb = TokenTrackerCallback("chart_agent")
+    intent = await chart_intent_chain.ainvoke({"question": chart_message}, config={"callbacks": [cb]})
     intent = intent.strip().upper()
     print(f"绘图意图判断: {intent}, 问题: {chart_message}")
 
     async def generate():
         try:
             if "NOT_CHART" in intent:
-                reply = await chart_not_chain.ainvoke({"question": chart_message})
+                reply = await chart_not_chain.ainvoke({"question": chart_message}, config={"callbacks": [cb]})
                 yield f"data: {json.dumps({'type': 'text', 'content': reply}, ensure_ascii=False)}\n\n"
                 yield "data: [DONE]\n\n"
                 return
@@ -35,6 +37,7 @@ async def chart_generate(request: ChartRequest):
                     "user_name": user_name,
                     "feedback": "",
                     "attempts": 0,
+                    "token_cb": cb,
                 }
             )
 

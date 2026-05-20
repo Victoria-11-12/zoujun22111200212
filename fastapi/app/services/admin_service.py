@@ -11,12 +11,13 @@ from app.logs import log_admin_chat, log_security_warning
 from app.chains.admin_chains import admin_intent_chain, admin_warning_chain
 from app.agents.admin_agent import admin_executor
 from app.tools.admin_tools import set_current_admin_name
+from app.token_tracker import TokenTrackerCallback
 
 
 # 管理员的安全警告流式回复
-async def admin_warning_stream(message: str, session_id: str, user_name: str = "", client_ip: str = ""):
+async def admin_warning_stream(message: str, session_id: str, user_name: str = "", client_ip: str = "", cb: TokenTrackerCallback = None):
     reply = ''
-    async for chunk in admin_warning_chain.astream({"message": message}):
+    async for chunk in admin_warning_chain.astream({"message": message}, config={"callbacks": [cb]}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
@@ -36,17 +37,18 @@ async def admin_ai_stream(request: AdminChatRequest, req: Request):
 
     async def generate():
         try:
-            intent = await admin_intent_chain.ainvoke({"message": message})
+            cb = TokenTrackerCallback("admin_agent")
+            intent = await admin_intent_chain.ainvoke({"message": message}, config={"callbacks": [cb]})
             intent = intent.strip().upper()
             print(f"[管理员] 意图判断: {intent}, 问题: {message}")
 
             if "WARNING" in intent:
-                async for chunk in admin_warning_stream(message, session_id, user_name=request.username, client_ip=client_ip):
+                async for chunk in admin_warning_stream(message, session_id, user_name=request.username, client_ip=client_ip, cb=cb):
                     yield chunk
                 return
 
             log_admin_chat(session_id, "user", message, user_name=request.username)
-            result = await admin_executor.ainvoke({"input": message})
+            result = await admin_executor.ainvoke({"input": message}, config={"callbacks": [cb]})
             agent_reply = result.get('output', '')
 
             for i in range(0, len(agent_reply), 10):

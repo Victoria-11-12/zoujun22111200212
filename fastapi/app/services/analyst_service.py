@@ -9,6 +9,7 @@ import pymysql
 from app.models import EvalQueryRequest, EvaluateRequest
 from app.chains.eval_chains import response_eval_chain, code_eval_chain
 from app.config import engine_analyst
+from app.token_tracker import TokenTrackerCallback
 
 
 # 评估进度全局变量
@@ -70,7 +71,7 @@ def save_eval_result(source_table: str,
 
 
 # 评估单条记录
-async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
+async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore, cb: TokenTrackerCallback):
     """评估单条记录的独立函数"""
     async with semaphore:
         try:
@@ -78,7 +79,7 @@ async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
                 result = await response_eval_chain.ainvoke({
                     "user_content": record.get("user_content", ""),
                     "ai_response": record.get("ai_content", "")
-                })
+                }, config={"callbacks": [cb]})
 
             elif eval_type == "code":
                 exec_result = json.dumps({
@@ -90,7 +91,7 @@ async def eval_one(record: dict, eval_type: str, semaphore: asyncio.Semaphore):
                     "question": record.get("question", ""),
                     "code": record.get("generated_code", ""),
                     "exec_result": exec_result
-                })
+                }, config={"callbacks": [cb]})
 
             save_eval_result(
                 source_table=record.get("source_table", ""),
@@ -128,7 +129,8 @@ async def evaluate_records_task_async(records: list, eval_type: str):
     """异步执行评估任务"""
     global eval_progress
     semaphore = asyncio.Semaphore(5)
-    await asyncio.gather(*[eval_one(r, eval_type, semaphore) for r in records])
+    cb = TokenTrackerCallback("eval_agent")
+    await asyncio.gather(*[eval_one(r, eval_type, semaphore, cb) for r in records])
     with eval_lock:
         eval_progress["status"] = "done"
 

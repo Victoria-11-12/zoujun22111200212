@@ -10,14 +10,15 @@ from app.history import get_history, save_history, MAX_HISTORY
 from app.logs import log_user_chat, log_security_warning
 from app.chains.user_chains import intent_chain, direct_chain, wrap_chain, warning_chain
 from app.agents.sql_agent import sql_executor
+from app.token_tracker import TokenTrackerCallback
 
 
 # 直接回复流式生成器
-async def direct_reply_stream(message: str, session_id: str, intent: str, user_name: str):
+async def direct_reply_stream(message: str, session_id: str, intent: str, user_name: str, cb: TokenTrackerCallback):
     history = get_history(session_id)[-MAX_HISTORY * 2:]
     log_user_chat(session_id, "user", message, intent=intent, user_name=user_name)
     reply = ''
-    async for chunk in direct_chain.astream({"message": message, "history": history}):
+    async for chunk in direct_chain.astream({"message": message, "history": history}, config={"callbacks": [cb]}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
@@ -26,14 +27,14 @@ async def direct_reply_stream(message: str, session_id: str, intent: str, user_n
 
 
 # SQL查询流式生成器
-async def sql_query_stream(message: str, session_id: str, intent: str, user_name: str):
+async def sql_query_stream(message: str, session_id: str, intent: str, user_name: str, cb: TokenTrackerCallback):
     history = get_history(session_id)[-MAX_HISTORY * 2:]
     log_user_chat(session_id, "user", message, intent=intent, user_name=user_name)
-    
-    result = await sql_executor.ainvoke({"input": message})
+
+    result = await sql_executor.ainvoke({"input": message}, config={"callbacks": [cb]})
     sql_result = result.get('output', '')
     reply = ''
-    async for chunk in wrap_chain.astream({"question": message, "result": sql_result, "history": history}):
+    async for chunk in wrap_chain.astream({"question": message, "result": sql_result, "history": history}, config={"callbacks": [cb]}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
@@ -42,9 +43,9 @@ async def sql_query_stream(message: str, session_id: str, intent: str, user_name
 
 
 # 警告回复流式生成器
-async def warning_stream(message: str, session_id: str, user_name: str, client_ip: str):
+async def warning_stream(message: str, session_id: str, user_name: str, client_ip: str, cb: TokenTrackerCallback):
     reply = ''
-    async for chunk in warning_chain.astream({"message": message}):
+    async for chunk in warning_chain.astream({"message": message}, config={"callbacks": [cb]}):
         reply += chunk
         yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
     yield "data: [DONE]\n\n"
@@ -62,18 +63,19 @@ async def ai_stream(request: ChatRequest, req: Request):
 
     async def generate():
         try:
-            intent = await intent_chain.ainvoke({"message": message})
+            cb = TokenTrackerCallback("user_agent")
+            intent = await intent_chain.ainvoke({"message": message}, config={"callbacks": [cb]})
             intent = intent.strip().upper()
             print(f"意图判断: {intent}, 问题: {message}")
 
             if "WARNING" in intent:
-                async for chunk in warning_stream(message, session_id, user_name, client_ip):
+                async for chunk in warning_stream(message, session_id, user_name, client_ip, cb):
                     yield chunk
             elif "DIRECT_REPLY" in intent:
-                async for chunk in direct_reply_stream(message, session_id, intent, user_name):
+                async for chunk in direct_reply_stream(message, session_id, intent, user_name, cb):
                     yield chunk
             else:
-                async for chunk in sql_query_stream(message, session_id, intent, user_name):
+                async for chunk in sql_query_stream(message, session_id, intent, user_name, cb):
                     yield chunk
         except Exception as e:
             print(f"AI 普通用户接口报错: {e}")
