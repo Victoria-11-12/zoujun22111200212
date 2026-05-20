@@ -17,10 +17,17 @@
 ├── deployment/               # 部署文档
 │   ├── DOCKER.md             # Docker 部署指南
 │   └── docker-compose.yml    # Docker Compose 配置
-└── docker/                   # Dockerfile 目录
-    ├── Dockerfile.fastapi    # FastAPI 服务
-    ├── Dockerfile.flask      # Flask 服务
-    └── Dockerfile.nodejs     # Node.js 服务
+├── docker/                   # Dockerfile 目录
+│   ├── Dockerfile.fastapi    # FastAPI 服务
+│   ├── Dockerfile.flask      # Flask 服务
+│   └── Dockerfile.nodejs     # Node.js 服务
+├── nginx/                    # Nginx 配置
+│   ├── nginx.conf            # 生产环境配置
+│   └── nginx.local.conf      # 本地开发配置
+└── monitoring/               # 可观测性监控（可选）
+    ├── README.md             # 监控部署指南
+    ├── docker-compose.monitoring.yml  # 监控组件 Compose 配置
+    └── prometheus.yml        # Prometheus 抓取配置
 ```
 
 ## 快速开始
@@ -69,6 +76,7 @@ docker-compose up -d
 - [安装指南](./guides/INSTALLATION.md) - 完整的环境搭建步骤
 - [配置说明](./guides/CONFIGURATION.md) - 环境变量与参数配置
 - [Docker 部署](./deployment/DOCKER.md) - 容器化部署指南
+- [监控部署](./monitoring/README.md) - Prometheus + Grafana 可观测性部署（可选）
 - [常见问题](./guides/TROUBLESHOOTING.md) - 问题排查与解决方案
 
 ## 配置文件说明

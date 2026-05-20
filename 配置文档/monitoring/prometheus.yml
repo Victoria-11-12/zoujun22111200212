@@ -1,0 +1,57 @@
+# ========================================
+# Prometheus 抓取配置
+# ========================================
+#
+# 本地部署与 Docker 部署的区别在于 targets 地址：
+#   - 本地部署：全部使用 localhost（如 localhost:9113）
+#   - Docker 部署：使用容器名（如 nginx-exporter:9113）
+#
+# 当前文件为 Docker 部署版本，如需本地部署请将容器名改为 localhost
+# ========================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+rule_files:
+  # - "first_rules.yml"
+
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          app: "prometheus"
+
+  # Nginx 状态监控（通过 nginx-exporter）
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          app: "nginx"
+
+  # 后端服务监控（需在各服务中实现 /metrics 端点后取消注释）
+  # - job_name: "nodejs"
+  #   static_configs:
+  #     - targets: ["web_node:3000"]
+  #       labels:
+  #         app: "nodejs"
+  #
+  # - job_name: "flask"
+  #   static_configs:
+  #     - targets: ["flask:5000"]
+  #       labels:
+  #         app: "flask"
+  #
+  # - job_name: "fastapi"
+  #   static_configs:
+  #     - targets: ["fastapi:8000"]
+  #       labels:
+  #         app: "fastapi"
