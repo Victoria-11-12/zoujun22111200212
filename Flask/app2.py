@@ -7,12 +7,58 @@ from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 import pymysql
 from dotenv import load_dotenv
-
+from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
 # 加载环境变量
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Prometheus 指标注册
+registry = CollectorRegistry()
+
+# HTTP 请求计数器
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['service', 'method', 'endpoint', 'status'],
+    registry=registry
+)
+
+# HTTP 请求延迟直方图
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['service', 'endpoint'],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+    registry=registry
+)
+
+# 请求统计
+@app.before_request
+def before_request():
+    request._start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    duration = time.time() - request._start_time
+    endpoint = request.endpoint or 'not_found'
+    http_requests_total.labels(
+        service='flask',
+        method=request.method,
+        endpoint=endpoint,
+        status=response.status_code
+    ).inc()
+    http_request_duration_seconds.labels(
+        service='flask',
+        endpoint=endpoint
+    ).observe(duration)
+    return response
+
+# Prometheus 指标端点
+@app.route('/metrics')
+def metrics():
+    return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
 
 # ============================================================
 # 一、数据库连接配置
