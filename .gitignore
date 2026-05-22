@@ -188,3 +188,5 @@ venv.bak/
 .claude
 
 .langgraph_api/
+
+.vscode
