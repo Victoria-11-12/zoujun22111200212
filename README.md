@@ -104,13 +104,11 @@ Docker 部署仅打包项目核心服务，Prometheus 与 Grafana 因内存占�
 
 ### 9、LangSmith 调用追踪
 
-<!-- TODO: 截图后替换 -->
 ![LangSmith追踪](./assets/images/LangSmith追踪.png)
 
 ### 10、Grafana 监控大屏
 
-<!-- TODO: 截图后替换 -->
-![Grafana监控大屏](./assets/images/Grafana监控大屏.png)
+![Grafana监控仪表盘](./assets/images/Grafana监控仪表盘.png)
 
 ## 技术路线
 
