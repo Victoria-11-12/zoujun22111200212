@@ -79,6 +79,11 @@
             return;
         }
 
+        if (!startDate || !endDate) {
+            alert('请选择评估的开始日期和结束日期');
+            return;
+        }
+
         // 保存当前筛选条件，用于获取结果时过滤
         currentEvalParams = { tables, startDate, endDate };
 

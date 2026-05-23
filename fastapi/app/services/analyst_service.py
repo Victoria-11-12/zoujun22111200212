@@ -227,13 +227,19 @@ async def start_evaluation(request: EvaluateRequest):
             eval_progress["total"] = len(all_records)
             eval_progress["completed"] = 0
 
-        def run_evaluation():
+        async def run_evaluation_async():
+            tasks = []
             if response_records:
-                asyncio.run(evaluate_records_task_async(response_records, "response"))
+                tasks.append(evaluate_records_task_async(response_records, "response"))
             if code_records:
-                asyncio.run(evaluate_records_task_async(code_records, "code"))
+                tasks.append(evaluate_records_task_async(code_records, "code"))
+            if tasks:
+                await asyncio.gather(*tasks)
             with eval_lock:
                 eval_progress["status"] = "done"
+
+        def run_evaluation():
+            asyncio.run(run_evaluation_async())
 
         thread = threading.Thread(target=run_evaluation)
         thread.start()

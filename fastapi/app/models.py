@@ -41,11 +41,11 @@ class ResponseEvalResult(BaseModel):  # 对话评估结果模型 - agents/eval_a
     score: int = Field(description="总分1-5")
     dimensions: dict = Field(description='{"相关性":5,"完整性":4,"准确性":3,"格式":5}')
     issues: str = Field(description="问题描述")
-    verdict: str = Field(description="pass/review/fail")
+    verdict: str = Field(default="fail", description="pass/review/fail")
 
 
 class CodeEvalResult(BaseModel):  # 代码评估结果模型 - agents/eval_agent.py - 评估Agent对图表生成代码进行质量评分
     score: int = Field(description="总分1-5")
     dimensions: dict = Field(description='{"可运行性":5,"图表完整性":4,"工具箱":3,"单位标注":5,"类型匹配":4}')
     issues: str = Field(description="问题描述")
-    verdict: str = Field(description="pass/review/fail")
+    verdict: str = Field(default="fail", description="pass/review/fail")
