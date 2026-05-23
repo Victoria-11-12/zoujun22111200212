@@ -103,6 +103,28 @@ def safe_execute_sql(query: str) -> str:
         return f"🚫 安全拦截：{reason}，该操作已被记录。"
     sql_upper = query.upper().strip()
 
+    # 检查是否操作管理员用户（删除或修改权限）
+    if 'USERS' in sql_upper and (sql_upper.startswith('DELETE') or sql_upper.startswith('UPDATE')):
+        where_match = re.search(r"WHERE\s+username\s*=\s*['\"]?(\w+)['\"]?", query, re.IGNORECASE)
+        if where_match:
+            target_username = where_match.group(1)
+            try:
+                conn_check = engine.raw_connection()
+                with conn_check.cursor() as check_cursor:
+                    check_cursor.execute("SELECT role FROM users WHERE username = %s", (target_username,))
+                    result = check_cursor.fetchone()
+                    if result and result[0] == 'admin':
+                        # 删除管理员
+                        if sql_upper.startswith('DELETE'):
+                            return f"🚫 安全拦截：禁止删除管理员用户 '{target_username}'，管理员账户受保护。"
+                        # 修改管理员权限（检查是否修改 role 字段）
+                        if 'ROLE' in sql_upper:
+                            return f"🚫 安全拦截：禁止修改管理员用户 '{target_username}' 的权限，管理员账户受保护。"
+            except Exception as e:
+                return f"检查用户角色失败: {str(e)}"
+            finally:
+                conn_check.close()
+
     try:
         # 使用连接池获取连接
         conn = engine.raw_connection()
