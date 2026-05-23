@@ -137,10 +137,10 @@ docker compose up -d
 ```
 
 首次启动会执行：
-1. 下载 MySQL、Node.js、Python 镜像（约 5-10 分钟，取决于网速）
-2. 构建三个服务的 Docker 镜像
+1. 下载 MySQL、Node.js、Python、Nginx 镜像（约 5-10 分钟，取决于网速）
+2. 构建 Node.js、Flask、FastAPI 服务的 Docker 镜像
 3. 启动 MySQL 并导入数据库
-4. 启动 Node.js、Flask、FastAPI 服务
+4. 启动 Nginx、Node.js、Flask、FastAPI 服务
 
 查看启动进度：
 ```bash
@@ -161,6 +161,7 @@ Name                Command                  State           Ports
 movie_fastapi       "python main.py"         Up (healthy)    0.0.0.0:8000->8000/tcp
 movie_flask         "python app2.py"         Up (healthy)    0.0.0.0:5000->5000/tcp
 movie_mysql         "docker-entrypoint.s…"   Up (healthy)    0.0.0.0:3306->3306/tcp
+movie_nginx         "/docker-entrypoint.…"   Up (healthy)    0.0.0.0:80->80/tcp
 movie_web_node      "docker-entrypoint.s…"   Up (healthy)    0.0.0.0:3000->3000/tcp
 ```
 
@@ -170,9 +171,9 @@ movie_web_node      "docker-entrypoint.s…"   Up (healthy)    0.0.0.0:3000->300
 
 ### 访问前端页面
 
-打开浏览器，访问：http://localhost:3000
+打开浏览器，访问：http://localhost/demo.html
 
-应该看到登录页面。
+应该看到可视化页面。
 
 ### 测试默认账号
 
@@ -210,12 +211,14 @@ docker compose logs fastapi
 docker compose logs flask
 docker compose logs web_node
 docker compose logs mysql
+docker compose logs nginx
 
 # 实时跟踪日志
 docker compose logs -f
 
 # 重启某个服务
 docker compose restart fastapi
+docker compose restart nginx
 
 # 停止所有服务
 docker compose down
@@ -226,6 +229,7 @@ docker compose down -v
 # 进入容器内部调试
 docker compose exec mysql bash
 docker compose exec fastapi bash
+docker compose exec nginx sh
 
 # 重新构建镜像
 docker compose build
