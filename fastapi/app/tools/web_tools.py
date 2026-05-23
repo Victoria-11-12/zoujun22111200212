@@ -91,16 +91,16 @@ def baike_search_tool(movie_name: str) -> str:
                 return "获取页面快照失败"
 
             # 步骤3: 填充搜索框
-            # @e84 是搜索框的ref标识，从快照中获取
-            result = run_agent_command(f'agent-browser fill @e84 "{movie_name}"')
+            # @e86 是搜索框的ref标识，从快照中获取
+            result = run_agent_command(f'agent-browser fill @e86 "{movie_name}"')
             if not result['success']:
                 return f"填充搜索框失败: {result['stderr'][:100]}"
 
             time.sleep(1)  # 等待输入完成
 
             # 步骤4: 点击"进入词条"按钮
-            # @e71 是搜索按钮的ref标识
-            result = run_agent_command('agent-browser click @e71')
+            # @e72 是搜索按钮的ref标识
+            result = run_agent_command('agent-browser click @e72')
             if not result['success']:
                 return f"点击搜索按钮失败: {result['stderr'][:100]}"
 
