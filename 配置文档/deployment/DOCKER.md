@@ -91,6 +91,9 @@ cd 配置文档/deployment
 
 ```bash
 # 复制环境变量模板到当前目录（Docker Compose 在此目录读取 .env）
+# Windows:
+copy ..\.env.example .\.env
+# Liunx:
 cp ../.env.example ./.env
 
 # 编辑 .env 文件
@@ -171,7 +174,7 @@ movie_web_node      "docker-entrypoint.s…"   Up (healthy)    0.0.0.0:3000->300
 
 ### 访问前端页面
 
-打开浏览器，访问：http://localhost/demo.html
+打开浏览器，访问：http://localhost:8080/demo.html
 
 应该看到可视化页面。
 
@@ -191,7 +194,7 @@ movie_web_node      "docker-entrypoint.s…"   Up (healthy)    0.0.0.0:3000->300
 
 ### 查看 API 文档
 
-访问：http://localhost:8000/docs
+访问：http://localhost:8080/api/docs
 
 可以看到 FastAPI 自动生成的 API 文档。
 

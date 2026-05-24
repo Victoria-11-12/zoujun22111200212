@@ -643,12 +643,12 @@ app.get('/analyst/export', (req, res) => {
 app.listen(3000, () => {
     console.log('========================================');
     console.log('  电影数据分析系统 - 前端页面地址');
-    console.log('  通过 Nginx (80端口) 访问:');
+    console.log('  通过 Nginx (8080端口) 访问:');
     console.log('========================================');
-    console.log('  大屏首页:     http://localhost/demo.html');
-    console.log('  登录页面:     http://localhost/login.html');
-    console.log('  后台管理:     http://localhost/admin.html');
-    console.log('  评估平台:     http://localhost/analyst.html');
+    console.log('  大屏首页:     http://localhost:8080/demo.html');
+    console.log('  登录页面:     http://localhost:8080/login.html');
+    console.log('  后台管理:     http://localhost:8080/admin.html');
+    console.log('  评估平台:     http://localhost:8080/analyst.html');
     console.log('========================================');
     console.log('  默认账号: admin3 / 123456 (管理员)');
     console.log('            user1 / 123456 (普通用户)');
