@@ -14,8 +14,8 @@
 
 ## 视频演示
 
-- 演示视频：[待录制]()
-- 部署视频：[待录制]()
+- 演示视频：[BV1ZXVN6EEk2](https://www.bilibili.com/video/BV1ZXVN6EEk2)
+- 部署视频：[BV1fDVN6SEs8](https://www.bilibili.com/video/BV1fDVN6SEs8)
 
 ## 核心亮点
 
