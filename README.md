@@ -14,8 +14,8 @@
 
 ## 视频演示
 
-- 演示视频：[BV1ZXVN6EEk2](https://www.bilibili.com/video/BV1ZXVN6EEk2)
-- 部署视频：[BV1fDVN6SEs8](https://www.bilibili.com/video/BV1fDVN6SEs8)
+- 部署视频：[BV1nKVN6DEa8](https://www.bilibili.com/video/BV1nKVN6DEa8)
+- 演示视频：[BV1bSVP6aEL9](https://www.bilibili.com/video/BV1bSVP6aEL9)
 
 ## 核心亮点
 
